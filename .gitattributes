@@ -1,0 +1,10 @@
+# Normaliza fim de linha: arquivos de script e config sempre com LF,
+# independente do SO de quem clonar. Evita .sh com CRLF quebrando no Linux.
+* text=auto
+
+*.sh    text eol=lf
+*.bash  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.patch text eol=lf
+*.diff  text eol=lf

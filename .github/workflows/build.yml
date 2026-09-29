@@ -1,0 +1,138 @@
+name: Build Chatwoot FP (CE + patches)
+
+# Gera uma imagem Chatwoot Community Edition (CE) a partir da tag oficial,
+# aplicando os patches deste repositório.
+#
+# Como usar: aba Actions -> "Build Chatwoot FP (CE + patches)" -> Run workflow
+#   chatwoot_ref: tag do Chatwoot (ex: v4.18.0)
+#   tag_suffix:   sufixo da imagem (ex: fp)
+#
+# Imagem publicada:
+#   ghcr.io/<owner>/chatwoot:<tag>-<sufixo>   ex: ghcr.io/user/chatwoot:v4.18.0-fp
+#   ghcr.io/<owner>/chatwoot:latest-<sufixo>  ex: ghcr.io/user/chatwoot:latest-fp
+
+on:
+  workflow_dispatch:
+    inputs:
+      chatwoot_ref:
+        description: 'Tag do Chatwoot para buildar (ex: v4.18.0)'
+        required: true
+        default: 'v4.18.0'
+        type: string
+      tag_suffix:
+        description: 'Sufixo da imagem (ex: fp)'
+        required: true
+        default: 'fp'
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/chatwoot
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      # ------------------------------------------------------------------
+      # 1. Nosso repositório (só contém patches/ e este workflow)
+      # ------------------------------------------------------------------
+      - name: Checkout dos patches
+        uses: actions/checkout@v4
+        with:
+          path: fp
+
+      # ------------------------------------------------------------------
+      # 2. Chatwoot oficial, ancorado na TAG de release (não em develop)
+      # ------------------------------------------------------------------
+      - name: Checkout do Chatwoot @ ${{ inputs.chatwoot_ref }}
+        uses: actions/checkout@v4
+        with:
+          repository: chatwoot/chatwoot
+          ref: ${{ inputs.chatwoot_ref }}
+          path: chatwoot
+
+      - name: Registrar versão base
+        run: |
+          cd chatwoot
+          echo "Commit base: $(git rev-parse HEAD)"
+          echo "Descreve: $(git describe --tags --always)"
+
+      # ------------------------------------------------------------------
+      # 3. Aplicar patches (se existirem)
+      # ------------------------------------------------------------------
+      - name: Aplicar patches
+        run: |
+          cd chatwoot
+          shopt -s nullglob
+          patches=(../fp/patches/*.patch)
+          if [ ${#patches[@]} -eq 0 ]; then
+            echo "Nenhum patch encontrado - build limpo (sem customizacao)."
+            exit 0
+          fi
+          for p in "${patches[@]}"; do
+            echo "==> aplicando $p"
+            git apply --verbose "$p"
+          done
+          echo "OK: ${#patches[@]} patch(es) aplicado(s)."
+
+      # ------------------------------------------------------------------
+      # 4. Marcar como Community Edition (remove o código enterprise)
+      # ------------------------------------------------------------------
+      - name: Remover código enterprise e marcar CW_EDITION=ce
+        run: |
+          cd chatwoot
+          rm -rf enterprise spec/enterprise
+          echo -en '\nENV CW_EDITION="ce"' >> docker/Dockerfile
+          tail -5 docker/Dockerfile
+
+      # ------------------------------------------------------------------
+      # 5. Build + push
+      # ------------------------------------------------------------------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login no GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push
+        env:
+          REF: ${{ inputs.chatwoot_ref }}
+          SUFFIX: ${{ inputs.tag_suffix }}
+        run: |
+          cd chatwoot
+          docker buildx build \
+            --platform linux/amd64 \
+            --file docker/Dockerfile \
+            --tag "${IMAGE}:${REF}-${SUFFIX}" \
+            --tag "${IMAGE}:latest-${SUFFIX}" \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --provenance=false \
+            --push \
+            .
+
+      - name: Resumo
+        env:
+          REF: ${{ inputs.chatwoot_ref }}
+          SUFFIX: ${{ inputs.tag_suffix }}
+        run: |
+          {
+            echo "## Build concluido"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Chatwoot base | \`${REF}\` |"
+            echo "| Imagem | \`${IMAGE}:${REF}-${SUFFIX}\` |"
+            echo "| Alias | \`${IMAGE}:latest-${SUFFIX}\` |"
+            echo "| Edicao | Community (CE) |"
+            echo "| Plataforma | linux/amd64 |"
+          } >> "$GITHUB_STEP_SUMMARY"

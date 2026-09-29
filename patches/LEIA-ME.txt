@@ -1,0 +1,12 @@
+# Coloque aqui os patches (.patch), em ordem alfabética de aplicação.
+#
+# Gerar um patch:
+#   git clone --depth 1 --branch v4.18.0 https://github.com/chatwoot/chatwoot.git /tmp/cw
+#   # edite os arquivos em /tmp/cw
+#   cd /tmp/cw && git diff > /caminho/patches/001-minha-mudanca.patch
+#
+# Este arquivo pode ser apagado quando o primeiro patch for adicionado.
+# Ele existe só para o diretório subir no git.
+#
+# Enquanto estiver vazio, o build roda limpo (Chatwoot CE sem customização),
+# o que é exatamente o que queremos no primeiro teste da pipeline.
