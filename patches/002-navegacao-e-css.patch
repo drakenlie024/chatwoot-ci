@@ -1,0 +1,76 @@
+diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+index 76e5af9..b4bed4f 100644
+--- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
++++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+@@ -687,6 +687,26 @@ const menuItems = computed(() => {
+           label: 'Lista de clientes',
+           to: accountScopedRoute('clientes_index'),
+         },
++      {
++        name: 'ClientesFila',
++        label: 'Meu dia',
++        to: `${accountScopedRoute('clientes_index')}?aba=fila`,
++      },
++      {
++        name: 'ClientesNegociacao',
++        label: 'Em negociação',
++        to: `${accountScopedRoute('clientes_index')}?aba=negociacao`,
++      },
++      {
++        name: 'ClientesRelatorios',
++        label: 'Relatórios',
++        to: `${accountScopedRoute('clientes_index')}?aba=relatorios`,
++      },
++      {
++        name: 'ClientesCampanhas',
++        label: 'Campanhas',
++        to: `${accountScopedRoute('clientes_index')}?aba=campanhas`,
++      },
+       ],
+     },
+     {
+@@ -722,16 +742,6 @@ const menuItems = computed(() => {
+         },
+       ],
+     },
+-    {
+-      name: 'Campaigns',
+-      label: t('SIDEBAR.CAMPAIGNS'),
+-      icon: 'i-lucide-megaphone',
+-      children: [
+-        {
+-          name: 'Live chat',
+-          label: t('SIDEBAR.LIVE_CHAT'),
+-          to: accountScopedRoute('campaigns_livechat_index'),
+-        },
+         {
+           name: 'SMS',
+           label: t('SIDEBAR.SMS'),
+diff --git a/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue b/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue
+index 065da65..8b05fab 100644
+--- a/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue
++++ b/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue
+@@ -4,7 +4,9 @@
+ export default {
+   name: 'ClientesPage',
+   data() {
+-    return { src: '/clientes' };
++    // a aba vem na URL (?aba=fila) - itens da sidebar caem na aba certa
++    const aba = new URLSearchParams(window.location.search).get('aba');
++    return { src: '/clientes' + (aba ? '?aba=' + encodeURIComponent(aba) : '') };
+   },
+ };
+ </script>
+diff --git a/app/views/layouts/vueapp.html.erb b/app/views/layouts/vueapp.html.erb
+index 00dea82..41444d9 100644
+--- a/app/views/layouts/vueapp.html.erb
++++ b/app/views/layouts/vueapp.html.erb
+@@ -32,6 +32,8 @@
+       <link rel="manifest" href="/manifest.json">
+     <% end %>
+     <link rel="icon" type="image/png" sizes="512x512" href="<%= @global_config['LOGO_THUMBNAIL'] %>">
++    <%# CSS do painel FP - permite ajustar a interface SEM rebuild %>
++    <link rel="stylesheet" href="/clientes/chatwoot.css">
+     <%= csrf_meta_tags %>
+     <script>
+       window.chatwootConfig = {
