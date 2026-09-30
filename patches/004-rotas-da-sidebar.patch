@@ -1,0 +1,37 @@
+diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+index 4fecab0..15ee8a3 100644
+--- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
++++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+@@ -690,27 +690,27 @@ const menuItems = computed(() => {
+       {
+         name: 'ClientesFila',
+         label: 'Meu dia',
+-        to: `${accountScopedRoute('clientes_index')}?aba=fila`,
++        to: accountScopedRoute('clientes_index', {}, { aba: 'fila' }),
+       },
+       {
+         name: 'ClientesNegociacao',
+         label: 'Em negociação',
+-        to: `${accountScopedRoute('clientes_index')}?aba=negociacao`,
++        to: accountScopedRoute('clientes_index', {}, { aba: 'negociacao' }),
+       },
+       {
+         name: 'ClientesRelatorios',
+         label: 'Relatórios',
+-        to: `${accountScopedRoute('clientes_index')}?aba=relatorios`,
++        to: accountScopedRoute('clientes_index', {}, { aba: 'relatorios' }),
+       },
+       {
+         name: 'ClientesCampanhas',
+         label: 'Campanhas',
+-        to: `${accountScopedRoute('clientes_index')}?aba=campanhas`,
++        to: accountScopedRoute('clientes_index', {}, { aba: 'campanhas' }),
+       },
+       {
+         name: 'ClientesDisparo',
+         label: 'Disparo',
+-        to: `${accountScopedRoute('clientes_index')}?aba=disparo`,
++        to: accountScopedRoute('clientes_index', {}, { aba: 'disparo' }),
+       },
+       ],
+     },
