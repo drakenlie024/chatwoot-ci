@@ -1,0 +1,178 @@
+diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+index 15ee8a3..eca1f0a 100644
+--- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
++++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+@@ -682,36 +682,41 @@ const menuItems = computed(() => {
+       label: 'Clientes',
+       icon: 'i-lucide-users',
+       children: [
++        {
++          name: 'ClientesBusca',
++          label: 'Buscar cliente',
++          to: accountScopedRoute('clientes_busca'),
++        },
+         {
+           name: 'ClientesLista',
+           label: 'Lista de clientes',
+           to: accountScopedRoute('clientes_index'),
+         },
+-      {
+-        name: 'ClientesFila',
+-        label: 'Meu dia',
+-        to: accountScopedRoute('clientes_index', {}, { aba: 'fila' }),
+-      },
+-      {
+-        name: 'ClientesNegociacao',
+-        label: 'Em negociação',
+-        to: accountScopedRoute('clientes_index', {}, { aba: 'negociacao' }),
+-      },
+-      {
+-        name: 'ClientesRelatorios',
+-        label: 'Relatórios',
+-        to: accountScopedRoute('clientes_index', {}, { aba: 'relatorios' }),
+-      },
+-      {
+-        name: 'ClientesCampanhas',
+-        label: 'Campanhas',
+-        to: accountScopedRoute('clientes_index', {}, { aba: 'campanhas' }),
+-      },
+-      {
+-        name: 'ClientesDisparo',
+-        label: 'Disparo',
+-        to: accountScopedRoute('clientes_index', {}, { aba: 'disparo' }),
+-      },
++        {
++          name: 'ClientesFila',
++          label: 'Meu dia',
++          to: accountScopedRoute('clientes_fila'),
++        },
++        {
++          name: 'ClientesNegociacao',
++          label: 'Em negociação',
++          to: accountScopedRoute('clientes_negociacao'),
++        },
++        {
++          name: 'ClientesRelatorios',
++          label: 'Relatórios',
++          to: accountScopedRoute('clientes_relatorios'),
++        },
++        {
++          name: 'ClientesCampanhas',
++          label: 'Campanhas',
++          to: accountScopedRoute('clientes_campanhas'),
++        },
++        {
++          name: 'ClientesDisparo',
++          label: 'Disparo',
++          to: accountScopedRoute('clientes_disparo'),
++        },
+       ],
+     },
+     {
+diff --git a/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue b/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue
+index 05c76d5..ee2b111 100644
+--- a/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue
++++ b/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue
+@@ -1,17 +1,33 @@
+ <script>
+ // Pagina que exibe o painel de clientes da FP Consignado dentro do Chatwoot.
+ // O painel e uma aplicacao separada, no mesmo dominio, em /clientes.
++//
++// Com rotas de verdade (/clientes/:aba) o Vue reaproveita ESTE componente e so
++// o `watch` troca a URL do iframe. O painel le a aba em `?aba=` na propria URL.
++const ABA_POR_ROTA = {
++  clientes_busca: 'busca',
++  clientes_fila: 'fila',
++  clientes_negociacao: 'negociacao',
++  clientes_relatorios: 'relatorios',
++  clientes_campanhas: 'campanhas',
++  clientes_disparo: 'disparo',
++};
++
++function urlDaAba(nomeRota) {
++  const aba = ABA_POR_ROTA[nomeRota];
++  return '/clientes' + (aba ? '?aba=' + encodeURIComponent(aba) : '');
++}
++
+ export default {
+   name: 'ClientesPage',
+   data() {
+-    const aba = new URLSearchParams(window.location.search).get('aba');
+-    return { src: '/clientes' + (aba ? '?aba=' + encodeURIComponent(aba) : '') };
++    return { src: urlDaAba(this.$route?.name) };
+   },
+   watch: {
+-    // A sidebar muda SO a query (?aba=fila). Sem este watch o Vue reaproveita
+-    // a pagina, o iframe nao recarrega e os itens do menu nao fazem nada.
+-    '$route.query.aba'(nova) {
+-      this.src = '/clientes' + (nova ? '?aba=' + encodeURIComponent(nova) : '');
++    // A sidebar muda de rota; sem este watch o Vue reaproveita a pagina, o
++    // iframe nao recarrega e os itens do menu nao fazem nada.
++    '$route.name'(nomeRota) {
++      this.src = urlDaAba(nomeRota);
+     },
+   },
+ };
+diff --git a/app/javascript/dashboard/routes/dashboard/clientes/clientes.routes.js b/app/javascript/dashboard/routes/dashboard/clientes/clientes.routes.js
+index 330a29e..244c193 100644
+--- a/app/javascript/dashboard/routes/dashboard/clientes/clientes.routes.js
++++ b/app/javascript/dashboard/routes/dashboard/clientes/clientes.routes.js
+@@ -1,13 +1,55 @@
+ import { frontendURL } from '../../../helper/URLHelper';
+ import Clientes from './Clientes.vue';
+ 
++// Cada aba do painel e uma rota de verdade (nao mais ?aba=...). Isso faz o item
++// da sidebar ficar ACESO no menu e o Vue reaproveitar a pagina trocando so o
++// iframe. As permissoes de cada rota sao o que esconde os itens de administrador
++// do agente (a sidebar filtra os filhos por `meta.permissions`).
++const TODOS = { permissions: ['administrator', 'agent', 'custom_role'] };
++const ADMIN = { permissions: ['administrator'] };
++
+ export const routes = [
+   {
+     path: frontendURL('accounts/:accountId/clientes'),
+     name: 'clientes_index',
+     component: Clientes,
+-    meta: {
+-      permissions: ['administrator', 'agent', 'custom_role'],
+-    },
++    meta: ADMIN,
++  },
++  {
++    // a busca do agente/operador (a NOSSA busca - CPF, beneficio, telefone)
++    path: frontendURL('accounts/:accountId/clientes/busca'),
++    name: 'clientes_busca',
++    component: Clientes,
++    meta: TODOS,
++  },
++  {
++    path: frontendURL('accounts/:accountId/clientes/fila'),
++    name: 'clientes_fila',
++    component: Clientes,
++    meta: TODOS,
++  },
++  {
++    path: frontendURL('accounts/:accountId/clientes/negociacao'),
++    name: 'clientes_negociacao',
++    component: Clientes,
++    meta: TODOS,
++  },
++  {
++    path: frontendURL('accounts/:accountId/clientes/relatorios'),
++    name: 'clientes_relatorios',
++    component: Clientes,
++    meta: ADMIN,
++  },
++  {
++    path: frontendURL('accounts/:accountId/clientes/campanhas'),
++    name: 'clientes_campanhas',
++    component: Clientes,
++    meta: ADMIN,
++  },
++  {
++    path: frontendURL('accounts/:accountId/clientes/disparo'),
++    name: 'clientes_disparo',
++    component: Clientes,
++    meta: ADMIN,
+   },
+ ];
