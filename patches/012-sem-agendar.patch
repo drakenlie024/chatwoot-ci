@@ -1,0 +1,17 @@
+diff --git a/app/javascript/dashboard/components/widgets/conversation/FpActions.vue b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
+index 1cbd57e..d018454 100644
+--- a/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
++++ b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
+@@ -68,12 +68,6 @@ const acoes = computed(() => [
+     ic: 'i-lucide-clipboard-check',
+     run: () => enviarAcao('tabular'),
+   },
+-  {
+-    rot: 'Agendar retorno',
+-    curto: 'Agendar',
+-    ic: 'i-lucide-calendar-clock',
+-    run: () => enviarAcao('agendar'),
+-  },
+   {
+     rot: 'Ficha do cliente',
+     curto: 'Ficha',
