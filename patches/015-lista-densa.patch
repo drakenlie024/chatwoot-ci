@@ -1,0 +1,59 @@
+diff --git a/app/javascript/dashboard/components/widgets/conversation/ConversationCard.vue b/app/javascript/dashboard/components/widgets/conversation/ConversationCard.vue
+index bc7aa62..b5626c0 100644
+--- a/app/javascript/dashboard/components/widgets/conversation/ConversationCard.vue
++++ b/app/javascript/dashboard/components/widgets/conversation/ConversationCard.vue
+@@ -129,9 +129,9 @@ watch(
+         v-if="!hideThumbnail"
+         :name="currentContact.name"
+         :src="currentContact.thumbnail"
+-        :size="32"
++        :size="24"
+         :status="currentContact.availability_status"
+-        :class="!showInboxName ? 'mt-4' : 'mt-8'"
++        :class="!showInboxName ? 'mt-3' : 'mt-6'"
+         hide-offline-status
+       >
+         <template #overlay="{ size }">
+@@ -146,7 +146,7 @@ watch(
+         </template>
+       </Avatar>
+     </div>
+-    <div class="px-0 py-3 flex-1 min-w-0 border-line">
++    <div class="px-0 py-1.5 flex-1 min-w-0 border-line">
+       <div
+         v-if="showMetaSection"
+         class="flex items-center min-w-0 gap-1"
+@@ -179,7 +179,7 @@ watch(
+         </div>
+       </div>
+       <h4
+-        class="conversation--user text-sm my-0 mx-2 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap flex-1 min-w-0 ltr:pr-16 rtl:pl-16 text-n-slate-12"
++        class="conversation--user text-[13px] leading-[18px] my-0 mx-2 capitalize text-ellipsis overflow-hidden whitespace-nowrap flex-1 min-w-0 ltr:pr-16 rtl:pl-16 text-n-slate-12"
+         :class="hasUnread ? 'font-semibold' : 'font-medium'"
+       >
+         {{ currentContact.name }}
+@@ -195,13 +195,13 @@ watch(
+         v-else-if="lastMessageInChat"
+         key="message-preview"
+         :message="lastMessageInChat"
+-        class="my-0 mx-2 leading-6 h-6 flex-1 min-w-0 text-sm"
++        class="my-0 mx-2 leading-5 h-5 flex-1 min-w-0 text-[13px]"
+         :class="messagePreviewClass"
+       />
+       <p
+         v-else
+         key="no-messages"
+-        class="text-n-slate-11 text-sm my-0 mx-2 leading-6 h-6 flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
++        class="text-n-slate-11 text-[13px] my-0 mx-2 leading-5 h-5 flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+         :class="messagePreviewClass"
+       >
+         <fluent-icon
+@@ -215,7 +215,7 @@ watch(
+       </p>
+       <div
+         class="absolute flex flex-col ltr:right-3 rtl:left-3"
+-        :class="showMetaSection ? 'top-8' : 'top-4'"
++        :class="showMetaSection ? 'top-6' : 'top-2.5'"
+       >
+         <span class="ml-auto font-normal leading-4 text-xxs">
+           <TimeAgo
