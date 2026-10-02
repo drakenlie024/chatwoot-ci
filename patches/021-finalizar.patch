@@ -1,0 +1,53 @@
+--- a/app/javascript/dashboard/components/widgets/conversation/MoreActions.vue
++++ b/app/javascript/dashboard/components/widgets/conversation/MoreActions.vue
+@@ -6,7 +6,6 @@
+ import { useI18n } from 'vue-i18n';
+ import { emitter } from 'shared/helpers/mitt';
+ import EmailTranscriptModal from './EmailTranscriptModal.vue';
+-import ResolveAction from '../../buttons/ResolveAction.vue';
+ import ButtonV4 from 'dashboard/components-next/button/Button.vue';
+ import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
+ 
+@@ -92,10 +91,6 @@
+ 
+ <template>
+   <div class="relative flex items-center gap-2 actions--container">
+-    <ResolveAction
+-      :conversation-id="currentChat.id"
+-      :status="currentChat.status"
+-    />
+     <div
+       v-on-clickaway="() => toggleDropdown(false)"
+       class="relative flex items-center group"
+--- a/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
++++ b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
+@@ -42,6 +42,16 @@
+   });
+ };
+ 
++// Finalizar o atendimento - e o nosso botao no lugar do "Resolver" do Chatwoot.
++const finalizar = () => {
++  const id = props.chat && props.chat.id;
++  if (!id) return;
++  store.dispatch('conversations/toggleStatus', {
++    conversationId: id,
++    status: 'resolved',
++  });
++};
++
+ // A acao vai para o painel FP (ConversationSidebar -> FpFrame -> iframe). Como o
+ // iframe pode estar montando ainda, repetimos por alguns segundos ate chegar.
+ const enviarAcao = acao => {
+@@ -98,6 +108,12 @@
+         `/clientes/?aba=busca&tipo=${buscaTipo.value}&q=${encodeURIComponent(buscaQ.value)}`
+       ),
+   },
++  {
++    rot: 'Finalizar atendimento',
++    curto: 'Finalizar',
++    ic: 'i-lucide-check-check',
++    run: () => finalizar(),
++  },
+ ]);
+ </script>
+ 
