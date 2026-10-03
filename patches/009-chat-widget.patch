@@ -1,19 +1,28 @@
 diff --git a/app/javascript/dashboard/components/widgets/conversation/FpChatWidget.vue b/app/javascript/dashboard/components/widgets/conversation/FpChatWidget.vue
 new file mode 100644
-index 0000000..8ba32ed
+index 0000000..6660ccd
 --- /dev/null
 +++ b/app/javascript/dashboard/components/widgets/conversation/FpChatWidget.vue
-@@ -0,0 +1,250 @@
+@@ -0,0 +1,379 @@
 +<script>
 +const FETCH_INFO_MESSAGE = 'chatwoot-dashboard-app:fetch-info';
 +const APP_CONTEXT_EVENT = 'appContext';
 +const DARK_THEME = 'dark';
 +
++// A posicao da bolha (quando o operador arrasta) fica salva por navegador.
++const POS_KEY = 'fp-chat-pos';
++const BOLHA = 52; // lado da bolha, em px
++const MARGEM = 12; // respiro minimo das bordas
++const PAINEL_L = 372;
++const PAINEL_A = 540;
++
 +const getCurrentTheme = () =>
 +  document.body.classList.contains(DARK_THEME) ? DARK_THEME : 'light';
 +
 +// Chat interno da FP como WIDGET flutuante: aparece em todas as telas do
-+// dashboard (canto inferior direito) e abre um mini chat (iframe /embed/chat).
++// dashboard, nasce no canto inferior direito e pode ser ARRASTADO para onde o
++// operador quiser (a posicao fica salva). O painel abre acima ou abaixo da
++// bolha, conforme o espaco, e nunca sai da tela.
 +// Fala o mesmo protocolo dos Dashboard Apps com o nosso painel.
 +export default {
 +  data() {
@@ -23,6 +32,9 @@ index 0000000..8ba32ed
 +      naoLidas: 0,
 +      currentTheme: getCurrentTheme(),
 +      themeObserver: null,
++      pos: null, // {x, y} em px; null = canto inferior direito
++      arrasto: null, // {dx, dy, moveu} enquanto o ponteiro esta pressionado
++      janela: { w: window.innerWidth, h: window.innerHeight },
 +    };
 +  },
 +  computed: {
@@ -38,26 +50,133 @@ index 0000000..8ba32ed
 +        theme: this.currentTheme,
 +      };
 +    },
++    // Onde a bolha esta agora: a posicao arrastada ou o canto padrao.
++    bolha() {
++      if (this.pos) return this.pos;
++      return {
++        x: this.janela.w - MARGEM - BOLHA,
++        y: this.janela.h - MARGEM - BOLHA,
++      };
++    },
++    estiloBolha() {
++      if (!this.pos) return {}; // sem arrasto, o CSS cuida (right/bottom)
++      return {
++        left: `${this.pos.x}px`,
++        top: `${this.pos.y}px`,
++        right: 'auto',
++        bottom: 'auto',
++      };
++    },
++    larguraPainel() {
++      return Math.min(PAINEL_L, this.janela.w - 2 * MARGEM);
++    },
++    alturaPainel() {
++      return Math.min(PAINEL_A, this.janela.h - BOLHA - 3 * MARGEM);
++    },
++    // Abre acima da bolha quando ha espaco; senao, abaixo. Alinha na horizontal
++    // para o painel inteiro caber na janela.
++    estiloPainel() {
++      const b = this.bolha;
++      const L = this.larguraPainel;
++      const A = this.alturaPainel;
++      const desloca =
++        Math.max(MARGEM, Math.min(b.x, this.janela.w - MARGEM - L)) - b.x;
++      const acima = b.y > A + BOLHA + 2 * MARGEM;
++      const estilo = { width: `${L}px`, height: `${A}px`, left: `${desloca}px` };
++      if (acima) estilo.bottom = `${BOLHA + MARGEM}px`;
++      else estilo.top = `${BOLHA + MARGEM}px`;
++      return estilo;
++    },
 +  },
 +  mounted() {
 +    window.addEventListener('message', this.onMessage);
++    window.addEventListener('resize', this.onResize);
 +    this.themeObserver = new MutationObserver(this.onThemeChange);
 +    this.themeObserver.observe(document.body, {
 +      attributes: true,
 +      attributeFilter: ['class'],
 +    });
++    this.pos = this.lerPosicao();
 +  },
 +  unmounted() {
 +    window.removeEventListener('message', this.onMessage);
++    window.removeEventListener('resize', this.onResize);
++    this.soltaPonteiro();
 +    this.themeObserver.disconnect();
 +  },
 +  methods: {
++    // ------------------------------------------------------------- posicao
++    limitar(p) {
++      return {
++        x: Math.max(MARGEM, Math.min(p.x, this.janela.w - MARGEM - BOLHA)),
++        y: Math.max(MARGEM, Math.min(p.y, this.janela.h - MARGEM - BOLHA)),
++      };
++    },
++    lerPosicao() {
++      try {
++        const p = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
++        if (p && typeof p.x === 'number' && typeof p.y === 'number') {
++          return this.limitar(p);
++        }
++      } catch (e) {
++        /* posicao salva invalida: volta para o canto */
++      }
++      return null;
++    },
++    onResize() {
++      this.janela = { w: window.innerWidth, h: window.innerHeight };
++      if (this.pos) this.pos = this.limitar(this.pos);
++    },
++    arrastarInicio(e) {
++      if (e.button !== undefined && e.button !== 0) return;
++      const b = this.bolha;
++      this.arrasto = { dx: e.clientX - b.x, dy: e.clientY - b.y, moveu: false };
++      window.addEventListener('pointermove', this.arrastarMover);
++      window.addEventListener('pointerup', this.arrastarFim);
++      window.addEventListener('pointercancel', this.arrastarFim);
++    },
++    arrastarMover(e) {
++      if (!this.arrasto) return;
++      const p = this.limitar({
++        x: e.clientX - this.arrasto.dx,
++        y: e.clientY - this.arrasto.dy,
++      });
++      if (Math.abs(p.x - this.bolha.x) + Math.abs(p.y - this.bolha.y) > 4) {
++        this.arrasto.moveu = true;
++      }
++      this.pos = p;
++      e.preventDefault();
++    },
++    arrastarFim() {
++      const moveu = !!(this.arrasto && this.arrasto.moveu);
++      this.soltaPonteiro();
++      this.arrasto = null;
++      if (moveu) {
++        try {
++          localStorage.setItem(POS_KEY, JSON.stringify(this.pos));
++        } catch (e) {
++          /* sem localStorage: so nao guarda a posicao */
++        }
++      } else {
++        this.alternar(); // foi clique, nao arrasto
++      }
++    },
++    soltaPonteiro() {
++      window.removeEventListener('pointermove', this.arrastarMover);
++      window.removeEventListener('pointerup', this.arrastarFim);
++      window.removeEventListener('pointercancel', this.arrastarFim);
++    },
++    // ---------------------------------------------------------------- chat
 +    alternar() {
 +      this.aberto = !this.aberto;
 +      if (this.aberto) {
 +        this.carregado = true;
 +        this.naoLidas = 0;
 +      }
++    },
++    // Clique de teclado (Enter/Espaco) tem detail 0; o de mouse passou pelo arrasto.
++    aoClicar(e) {
++      if (e.detail === 0) this.alternar();
 +    },
 +    onMessage(event) {
 +      let dados = event.data;
@@ -95,9 +214,9 @@ index 0000000..8ba32ed
 +</script>
 +
 +<template>
-+  <div class="fp-chat">
++  <div class="fp-chat" :style="estiloBolha()">
 +    <transition name="fp-chat-fade">
-+      <section v-if="aberto" class="fp-chat-panel">
++      <section v-if="aberto" class="fp-chat-panel" :style="estiloPainel()">
 +        <header class="fp-chat-top">
 +          <span class="fp-chat-title">Chat Interno</span>
 +          <button
@@ -122,8 +241,11 @@ index 0000000..8ba32ed
 +      type="button"
 +      class="fp-chat-bubble"
 +      :class="{ 'fp-chat-bubble--on': aberto }"
-+      :title="aberto ? 'Fechar chat interno' : 'Chat Interno'"
-+      @click="alternar"
++      :title="aberto ? 'Fechar chat interno' : 'Chat Interno — arraste para mover'"
++      @pointerdown="arrastarInicio"
++      @click="aoClicar"
++      @keydown.enter.prevent="alternar"
++      @keydown.space.prevent="alternar"
 +    >
 +      <span
 +        class="fp-chat-ic"
@@ -139,8 +261,8 @@ index 0000000..8ba32ed
 +<style scoped>
 +.fp-chat {
 +  position: fixed;
-+  right: 18px;
-+  bottom: 18px;
++  right: 12px;
++  bottom: 12px;
 +  z-index: 30;
 +}
 +.fp-chat-bubble {
@@ -154,9 +276,14 @@ index 0000000..8ba32ed
 +  border-radius: 50%;
 +  background: linear-gradient(135deg, #2b7fe0, #5b6cf0);
 +  color: #fff;
-+  cursor: pointer;
++  cursor: grab;
++  touch-action: none;
++  user-select: none;
 +  box-shadow: 0 10px 26px rgba(43, 127, 224, 0.45);
 +  transition: transform 0.15s ease;
++}
++.fp-chat-bubble:active {
++  cursor: grabbing;
 +}
 +.fp-chat-bubble:hover {
 +  transform: translateY(-2px);
@@ -186,12 +313,14 @@ index 0000000..8ba32ed
 +  text-align: center;
 +  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
 +}
++/* Largura/altura e o lado (acima/abaixo) vem do componente (estiloPainel), que
++   olha o tamanho da janela. O CSS aqui e so o piso. */
 +.fp-chat-panel {
 +  position: absolute;
-+  right: 0;
++  right: auto;
 +  bottom: 64px;
 +  width: 372px;
-+  max-width: calc(100vw - 36px);
++  max-width: calc(100vw - 24px);
 +  height: 540px;
 +  max-height: calc(100vh - 96px);
 +  display: flex;
@@ -254,6 +383,7 @@ index 0000000..8ba32ed
 +  background: #0f1319;
 +}
 +</style>
+
 diff --git a/app/javascript/dashboard/routes/dashboard/Dashboard.vue b/app/javascript/dashboard/routes/dashboard/Dashboard.vue
 index 0f5e545..005c41e 100644
 --- a/app/javascript/dashboard/routes/dashboard/Dashboard.vue
