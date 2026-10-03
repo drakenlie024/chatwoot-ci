@@ -1,9 +1,9 @@
 diff --git a/app/javascript/dashboard/components/widgets/conversation/FpChatWidget.vue b/app/javascript/dashboard/components/widgets/conversation/FpChatWidget.vue
 new file mode 100644
-index 0000000..6660ccd
+index 0000000..c8f319c
 --- /dev/null
 +++ b/app/javascript/dashboard/components/widgets/conversation/FpChatWidget.vue
-@@ -0,0 +1,379 @@
+@@ -0,0 +1,390 @@
 +<script>
 +const FETCH_INFO_MESSAGE = 'chatwoot-dashboard-app:fetch-info';
 +const APP_CONTEXT_EVENT = 'appContext';
@@ -23,7 +23,12 @@ index 0000000..6660ccd
 +// dashboard, nasce no canto inferior direito e pode ser ARRASTADO para onde o
 +// operador quiser (a posicao fica salva). O painel abre acima ou abaixo da
 +// bolha, conforme o espaco, e nunca sai da tela.
-+// Fala o mesmo protocolo dos Dashboard Apps com o nosso painel.
++//
++// ATENCAO (armadilha paga): tudo que o TEMPLATE chama tem que ser `method`.
++// O compilador resolve chamada do template como `$options.<nome>`, e o
++// `$options` traz os metodos, mas NAO os computeds - chamar computed no
++// template da "TypeError: x is not a function" e o componente nao renderiza
++// (o dashboard segue, o widget some). Por isso posicao/estilo sao methods.
 +export default {
 +  data() {
 +    return {
@@ -38,6 +43,7 @@ index 0000000..6660ccd
 +    };
 +  },
 +  computed: {
++    // Só uso interno (nunca chamado do template).
 +    currentAgent() {
 +      const { id, name, email } = this.$store.getters.getCurrentUser;
 +      return { id, name, email };
@@ -50,8 +56,27 @@ index 0000000..6660ccd
 +        theme: this.currentTheme,
 +      };
 +    },
-+    // Onde a bolha esta agora: a posicao arrastada ou o canto padrao.
-+    bolha() {
++  },
++  mounted() {
++    window.addEventListener('message', this.onMessage);
++    window.addEventListener('resize', this.onResize);
++    this.themeObserver = new MutationObserver(this.onThemeChange);
++    this.themeObserver.observe(document.body, {
++      attributes: true,
++      attributeFilter: ['class'],
++    });
++    this.pos = this.lerPosicao();
++  },
++  unmounted() {
++    window.removeEventListener('message', this.onMessage);
++    window.removeEventListener('resize', this.onResize);
++    this.soltaPonteiro();
++    this.themeObserver.disconnect();
++  },
++  methods: {
++    // -------------------------------------------------- posicao e estilo
++    // (methods, e nao computeds: ver o aviso no topo do arquivo)
++    posicaoBolha() {
 +      if (this.pos) return this.pos;
 +      return {
 +        x: this.janela.w - MARGEM - BOLHA,
@@ -76,36 +101,20 @@ index 0000000..6660ccd
 +    // Abre acima da bolha quando ha espaco; senao, abaixo. Alinha na horizontal
 +    // para o painel inteiro caber na janela.
 +    estiloPainel() {
-+      const b = this.bolha;
-+      const L = this.larguraPainel;
-+      const A = this.alturaPainel;
++      const b = this.posicaoBolha();
++      const largura = this.larguraPainel();
++      const altura = this.alturaPainel();
 +      const desloca =
-+        Math.max(MARGEM, Math.min(b.x, this.janela.w - MARGEM - L)) - b.x;
-+      const acima = b.y > A + BOLHA + 2 * MARGEM;
-+      const estilo = { width: `${L}px`, height: `${A}px`, left: `${desloca}px` };
-+      if (acima) estilo.bottom = `${BOLHA + MARGEM}px`;
++        Math.max(MARGEM, Math.min(b.x, this.janela.w - MARGEM - largura)) - b.x;
++      const estilo = {
++        width: `${largura}px`,
++        height: `${altura}px`,
++        left: `${desloca}px`,
++      };
++      if (b.y > altura + BOLHA + 2 * MARGEM) estilo.bottom = `${BOLHA + MARGEM}px`;
 +      else estilo.top = `${BOLHA + MARGEM}px`;
 +      return estilo;
 +    },
-+  },
-+  mounted() {
-+    window.addEventListener('message', this.onMessage);
-+    window.addEventListener('resize', this.onResize);
-+    this.themeObserver = new MutationObserver(this.onThemeChange);
-+    this.themeObserver.observe(document.body, {
-+      attributes: true,
-+      attributeFilter: ['class'],
-+    });
-+    this.pos = this.lerPosicao();
-+  },
-+  unmounted() {
-+    window.removeEventListener('message', this.onMessage);
-+    window.removeEventListener('resize', this.onResize);
-+    this.soltaPonteiro();
-+    this.themeObserver.disconnect();
-+  },
-+  methods: {
-+    // ------------------------------------------------------------- posicao
 +    limitar(p) {
 +      return {
 +        x: Math.max(MARGEM, Math.min(p.x, this.janela.w - MARGEM - BOLHA)),
@@ -127,9 +136,10 @@ index 0000000..6660ccd
 +      this.janela = { w: window.innerWidth, h: window.innerHeight };
 +      if (this.pos) this.pos = this.limitar(this.pos);
 +    },
++    // ------------------------------------------------------------ arrasto
 +    arrastarInicio(e) {
 +      if (e.button !== undefined && e.button !== 0) return;
-+      const b = this.bolha;
++      const b = this.posicaoBolha();
 +      this.arrasto = { dx: e.clientX - b.x, dy: e.clientY - b.y, moveu: false };
 +      window.addEventListener('pointermove', this.arrastarMover);
 +      window.addEventListener('pointerup', this.arrastarFim);
@@ -141,7 +151,8 @@ index 0000000..6660ccd
 +        x: e.clientX - this.arrasto.dx,
 +        y: e.clientY - this.arrasto.dy,
 +      });
-+      if (Math.abs(p.x - this.bolha.x) + Math.abs(p.y - this.bolha.y) > 4) {
++      const atual = this.posicaoBolha();
++      if (Math.abs(p.x - atual.x) + Math.abs(p.y - atual.y) > 4) {
 +        this.arrasto.moveu = true;
 +      }
 +      this.pos = p;
@@ -166,7 +177,7 @@ index 0000000..6660ccd
 +      window.removeEventListener('pointerup', this.arrastarFim);
 +      window.removeEventListener('pointercancel', this.arrastarFim);
 +    },
-+    // ---------------------------------------------------------------- chat
++    // --------------------------------------------------------------- chat
 +    alternar() {
 +      this.aberto = !this.aberto;
 +      if (this.aberto) {
