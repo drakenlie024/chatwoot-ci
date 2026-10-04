@@ -1,0 +1,63 @@
+diff --git a/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue b/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue
+new file mode 100644
+index 0000000..065da65
+--- /dev/null
++++ b/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue
+@@ -0,0 +1,18 @@
++<script>
++// Pagina que exibe o painel de clientes da FP Consignado dentro do Chatwoot.
++// O painel e uma aplicacao separada, no mesmo dominio, em /clientes.
++export default {
++  name: 'ClientesPage',
++  data() {
++    return { src: '/clientes' };
++  },
++};
++</script>
++
++<template>
++  <iframe
++    :src="src"
++    title="Clientes"
++    class="w-full h-full border-0 flex-1 bg-n-surface-1"
++  />
++</template>
+diff --git a/app/javascript/dashboard/routes/dashboard/clientes/clientes.routes.js b/app/javascript/dashboard/routes/dashboard/clientes/clientes.routes.js
+new file mode 100644
+index 0000000..330a29e
+--- /dev/null
++++ b/app/javascript/dashboard/routes/dashboard/clientes/clientes.routes.js
+@@ -0,0 +1,13 @@
++import { frontendURL } from '../../../helper/URLHelper';
++import Clientes from './Clientes.vue';
++
++export const routes = [
++  {
++    path: frontendURL('accounts/:accountId/clientes'),
++    name: 'clientes_index',
++    component: Clientes,
++    meta: {
++      permissions: ['administrator', 'agent', 'custom_role'],
++    },
++  },
++];
+diff --git a/app/javascript/dashboard/routes/dashboard/dashboard.routes.js b/app/javascript/dashboard/routes/dashboard/dashboard.routes.js
+index a4acf76..8d23281 100644
+--- a/app/javascript/dashboard/routes/dashboard/dashboard.routes.js
++++ b/app/javascript/dashboard/routes/dashboard/dashboard.routes.js
+@@ -9,6 +9,7 @@ import { frontendURL } from '../../helper/URLHelper';
+ import helpcenterRoutes from './helpcenter/helpcenter.routes';
+ import campaignsRoutes from './campaigns/campaigns.routes';
+ import { routes as captainRoutes } from './captain/captain.routes';
++import { routes as clientesRoutes } from './clientes/clientes.routes';
+ import AppContainer from './Dashboard.vue';
+ import Suspended from './suspended/Index.vue';
+ import NoAccounts from './noAccounts/Index.vue';
+@@ -22,6 +23,7 @@ export default {
+       component: AppContainer,
+       children: [
+         ...captainRoutes,
++        ...clientesRoutes,
+         ...inboxRoutes,
+         ...conversation.routes,
+         ...settings.routes,

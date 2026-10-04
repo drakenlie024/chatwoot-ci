@@ -1,0 +1,27 @@
+diff --git a/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue b/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue
+index 065da65..1e44d10 100644
+--- a/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue
++++ b/app/javascript/dashboard/routes/dashboard/clientes/Clientes.vue
+@@ -4,7 +4,8 @@
+ export default {
+   name: 'ClientesPage',
+   data() {
+-    return { src: '/clientes' };
++    const aba = new URLSearchParams(window.location.search).get('aba');
++    return { src: '/clientes' + (aba ? '?aba=' + encodeURIComponent(aba) : '') };
+   },
+ };
+ </script>
+diff --git a/app/views/layouts/vueapp.html.erb b/app/views/layouts/vueapp.html.erb
+index 00dea82..786c7d9 100644
+--- a/app/views/layouts/vueapp.html.erb
++++ b/app/views/layouts/vueapp.html.erb
+@@ -32,6 +32,8 @@
+       <link rel="manifest" href="/manifest.json">
+     <% end %>
+     <link rel="icon" type="image/png" sizes="512x512" href="<%= @global_config['LOGO_THUMBNAIL'] %>">
++    <%# CSS do painel FP - ajustar a interface SEM rebuild %>
++    <link rel="stylesheet" href="/clientes/chatwoot.css">
+     <%= csrf_meta_tags %>
+     <script>
+       window.chatwootConfig = {
