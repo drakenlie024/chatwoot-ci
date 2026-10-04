@@ -1,7 +1,7 @@
 diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 --- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 +++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
-@@ -359,611 +359,217 @@
+@@ -359,598 +359,217 @@
  ];
  
  const reportRoutes = computed(() => newReportRoutes());
@@ -761,28 +761,15 @@ diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/
 -    },
 -  ];
 -});
--</script>
--
--<template>
--  <aside
--    v-on-click-outside="[
--      closeMobileSidebar,
--      {
--        ignore: [
--          '#mobile-sidebar-launcher',
--          '[data-popover-content]',
--          '[data-popover-backdrop]',
--        ],
--      },
 +    });
 +  }
 +
 +  return baseItems;
 +});
 +
-+,
-     ]"
-     class="bg-n-background flex flex-col text-sm pb-px fixed top-0 ltr:left-0 rtl:right-0 h-full z-40 w-[200px] md:w-auto md:relative md:flex-shrink-0 md:ltr:translate-x-0 md:rtl:translate-x-0 ltr:border-r rtl:border-l border-n-weak"
-     :class="[
-       {
-         'shadow-lg md:shadow-none': isMobileSidebarOpen,
++;
+ </script>
+ 
+ <template>
+   <aside
+     v-on-click-outside="[
