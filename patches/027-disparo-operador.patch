@@ -1,0 +1,22 @@
+diff --git a/app/javascript/dashboard/routes/dashboard/clientes/clientes.routes.js b/app/javascript/dashboard/routes/dashboard/clientes/clientes.routes.js
+--- a/app/javascript/dashboard/routes/dashboard/clientes/clientes.routes.js
++++ b/app/javascript/dashboard/routes/dashboard/clientes/clientes.routes.js
+@@ -42,14 +42,16 @@
+   },
+   {
+     path: frontendURL('accounts/:accountId/clientes/campanhas'),
+     name: 'clientes_campanhas',
+     component: Clientes,
+-    meta: ADMIN,
++    // Operador tambem pode pedir disparo pelo menu.
++    meta: TODOS,
+   },
+   {
+     path: frontendURL('accounts/:accountId/clientes/disparo'),
+     name: 'clientes_disparo',
+     component: Clientes,
+-    meta: ADMIN,
++    // Operador tambem pode pedir disparo pelo menu.
++    meta: TODOS,
+   },
+ ];
