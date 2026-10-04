@@ -1,7 +1,7 @@
 diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 --- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 +++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
-@@ -359,631 +359,217 @@
+@@ -362,598 +362,217 @@
  ];
  
  const reportRoutes = computed(() => newReportRoutes());
@@ -528,39 +528,6 @@ diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/
 -          name: 'ClientesDisparo',
 -          label: 'Disparo',
 -          to: accountScopedRoute('clientes_disparo'),
--        },
--      ],
--    },
--    {
--      name: 'Reports',
--      label: t('SIDEBAR.REPORTS'),
--      icon: 'i-lucide-chart-spline',
--      children: [
--        {
--          name: 'Report Overview',
--          label: t('SIDEBAR.REPORTS_OVERVIEW'),
--          to: accountScopedRoute('account_overview_reports'),
--        },
--        {
--          name: 'Report Conversation',
--          label: t('SIDEBAR.REPORTS_CONVERSATION'),
--          to: accountScopedRoute('conversation_reports'),
--        },
--        ...reportRoutes.value,
--        {
--          name: 'Reports CSAT',
--          label: t('SIDEBAR.CSAT'),
--          to: accountScopedRoute('csat_reports'),
--        },
--        {
--          name: 'Reports SLA',
--          label: t('SIDEBAR.REPORTS_SLA'),
--          to: accountScopedRoute('sla_reports'),
--        },
--        {
--          name: 'Reports Bot',
--          label: t('SIDEBAR.REPORTS_BOT'),
--          to: accountScopedRoute('bot_reports'),
 -        },
 -      ],
 -    },
