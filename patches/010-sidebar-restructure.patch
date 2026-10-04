@@ -1,55 +1,54 @@
 diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 --- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 +++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
-@@ -359,598 +359,217 @@
+@@ -358,107 +358,149 @@
+   },
  ];
  
  const reportRoutes = computed(() => newReportRoutes());
  
++// Contador "Meu dia" (Clientes). Fica FORA do menuItems de proposito: dentro do
++// computed ele virava laco infinito - cada mudanca no valor reavaliava o
++// computed, que disparava o fetch de novo (o painel chegou a receber centenas
++// de GET /api/fila por segundo). Aqui: um fetch ao abrir + refresh de 60s.
++const meuDiaCount = ref(0);
++
++const buscarMeuDia = async () => {
++  const email = store.getters.getCurrentUser?.email;
++  if (!email) return;
++  try {
++    const resp = await fetch(
++      `/clientes/api/fila?operador=${encodeURIComponent(email)}`,
++      { credentials: 'include' }
++    );
++    if (!resp.ok) return;
++    const dados = await resp.json();
++    meuDiaCount.value = Array.isArray(dados) ? dados.length : 0;
++  } catch (e) {
++    // contador e cosmetico: se falhar o menu continua funcionando
++  }
++};
++
++let timerMeuDia = null;
++onMounted(() => {
++  buscarMeuDia();
++  timerMeuDia = setInterval(buscarMeuDia, 60000);
++});
++onUnmounted(() => {
++  if (timerMeuDia) clearInterval(timerMeuDia);
++});
++
  const menuItems = computed(() => {
 -  return [
-+  // Verifica se é admin
-+  const currentUser = store.getters.getCurrentUser;
-+  const isAdmin = currentUser?.role === "administrator" || currentUser?.role === "account_administrator";
++  const isAdmin =
++    store.getters.getCurrentUser?.role === 'administrator' ||
++    store.getters.getCurrentUser?.role === 'account_administrator';
 +
-+  // Contador "Meu dia" (Clientes) - busca da nossa API
-+  const meuDiaCount = ref(0);
-+  const carregandoMeuDia = ref(false);
-+
-+  const buscarMeuDia = async () => {
-+    if (carregandoMeuDia.value) return;
-+    carregandoMeuDia.value = true;
-+    try {
-+      const user = store.getters.getCurrentUser;
-+      const email = user?.email;
-+      if (!email) { meuDiaCount.value = 0; return; }
-+      const url = `/clientes/api/fila?operador=${encodeURIComponent(email)}`;
-+      const resp = await fetch(url, { credentials: "include" });
-+      if (resp.ok) {
-+        const data = await resp.json();
-+        meuDiaCount.value = Array.isArray(data) ? data.length : 0;
-+      }
-+    } catch (e) {
-+      console.warn("[Sidebar] falha ao buscar meu dia:", e);
-+      meuDiaCount.value = 0;
-+    } finally {
-+      carregandoMeuDia.value = false;
-+    }
-+  };
-+
-+  // Busca inicial + quando o usuário muda
-+  onMounted(() => { buscarMeuDia(); });
-+  watch(() => store.getters.getCurrentUser?.email, buscarMeuDia, { immediate: true });
-+
-+  // --- Contadores nativos do Chatwoot ---
 +  const minhasCount = allUnreadCount.value;
 +  const naoAtribuidasCount = unattendedUnreadCount.value;
 +  const todasCount = hasFilteredUnreadCounts.value ? allUnreadCount.value : 0;
 +
 +  const baseItems = [
-+    // ============================================================
-+    // OPERAÇÃO
-+    // ============================================================
      {
 -      name: 'Inbox',
 -      label: t('SIDEBAR.INBOX'),
@@ -59,21 +58,72 @@ diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/
 -      getterKeys: {
 -        count: 'notifications/getUnreadCount',
 -      },
--    },
--    {
++      name: 'Operacao',
++      label: 'OPERAÇÃO',
++      icon: 'i-lucide-briefcase',
++      children: [
++        {
++          name: 'Clientes',
++          label: 'Clientes',
++          icon: 'i-lucide-users',
++          to: accountScopedRoute('clientes_fila'),
++          activeOn: ['clientes_fila', 'clientes_busca', 'clientes_index'],
++          badgeCount: meuDiaCount.value,
++        },
++        {
++          name: 'MeuDiaHoje',
++          label: 'Meu dia de hoje',
++          icon: 'i-lucide-calendar-day',
++          to: accountScopedRoute('clientes_fila'),
++          activeOn: ['clientes_fila'],
++        },
++        {
++          name: 'Disparo',
++          label: 'DISPARO',
++          icon: 'i-lucide-send',
++          collapsible: true,
++          showTreeLine: true,
++          children: [
++            {
++              name: 'DisparoWhatsApp',
++              label: 'Disparo WhatsApp',
++              icon: 'i-lucide-message-square',
++              to: accountScopedRoute('clientes_disparo'),
++              activeOn: ['clientes_disparo'],
++            },
++            {
++              name: 'NovaCampanha',
++              label: 'Nova Campanha',
++              icon: 'i-lucide-plus-circle',
++              to: accountScopedRoute('clientes_campanhas'),
++              activeOn: ['clientes_campanhas'],
++            },
++            {
++              name: 'ReprocessarFila',
++              label: 'Reprocessar Fila',
++              icon: 'i-lucide-refresh-cw',
++              to: accountScopedRoute('clientes_fila'),
++              query: { reprocessar: '1' },
++            },
++          ],
++        },
++      ],
+     },
+     {
 -      name: 'Conversation',
 -      label: t('SIDEBAR.CONVERSATIONS'),
--      icon: 'i-lucide-message-circle',
-+      name: "Operacao",
-+      label: "OPERAÇÃO",
-+      icon: "i-lucide-briefcase",
-+      collapsible: false,
++      name: 'Conversas',
++      label: 'CONVERSAS',
+       icon: 'i-lucide-message-circle',
++      collapsible: true,
 +      showTreeLine: true,
        children: [
          {
 -          name: 'All',
 -          label: t('SIDEBAR.ALL_CONVERSATIONS'),
--          icon: 'i-lucide-inbox',
++          name: 'Minhas',
++          label: 'Minhas',
+           icon: 'i-lucide-inbox',
 -          badgeCount: allUnreadCount.value,
 -          activeOn: ['inbox_conversation'],
 -          to: accountScopedRoute('home'),
@@ -95,46 +145,32 @@ diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/
 -          badgeCount: hasFilteredUnreadCounts.value
 -            ? participatingUnreadCount.value
 -            : 0,
--          activeOn: ['conversation_through_participating'],
--          to: accountScopedRoute('conversation_participating'),
--        },
--        {
++          badgeCount: minhasCount,
+           activeOn: ['conversation_through_participating'],
+           to: accountScopedRoute('conversation_participating'),
+         },
+         {
 -          name: 'Unattended',
--          activeOn: ['conversation_through_unattended'],
++          name: 'NaoAtribuidas',
++          label: 'Não atribuídas',
++          icon: 'i-lucide-user-minus',
++          badgeCount: naoAtribuidasCount,
+           activeOn: ['conversation_through_unattended'],
 -          label: t('SIDEBAR.UNATTENDED_CONVERSATIONS'),
 -          icon: 'i-lucide-clock-alert',
 -          badgeCount: hasFilteredUnreadCounts.value
 -            ? unattendedUnreadCount.value
 -            : 0,
--          to: accountScopedRoute('conversation_unattended'),
--        },
--        {
+           to: accountScopedRoute('conversation_unattended'),
+         },
+         {
 -          name: 'Folders',
 -          label: t('SIDEBAR.CUSTOM_VIEWS_FOLDER'),
 -          icon: 'i-lucide-folder',
 -          activeOn: ['conversations_through_folders'],
 -          ...buildSortConfig(SIDEBAR_SORT_SECTIONS.FOLDERS),
-+          name: "Clientes",
-+          label: "Clientes",
-+          icon: "i-lucide-users",
-+          to: accountScopedRoute("clientes_fila"),
-+          activeOn: ["clientes_fila", "clientes_busca", "clientes_index"],
-+          badgeCount: carregandoMeuDia.value ? 0 : meuDiaCount.value,
-+        },
-+        {
-+          name: "MeuDiaHoje",
-+          label: "Meu dia de hoje",
-+          icon: "i-lucide-calendar-day",
-+          to: accountScopedRoute("clientes_fila"),
-+          activeOn: ["clientes_fila"],
-+        },
-+        // Subgrupo DISPARO (ações rápidas)
-+        {
-+          name: "Disparo",
-+          label: "DISPARO",
-+          icon: "i-lucide-send",
-           collapsible: true,
-           showTreeLine: true,
+-          collapsible: true,
+-          showTreeLine: true,
 -          children: sortedFolders.value.map(view => ({
 -            name: `${view.name}-${view.id}`,
 -            label: view.name,
@@ -169,108 +205,34 @@ diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/
 -        {
 -          name: 'Channels',
 -          label: t('SIDEBAR.CHANNELS'),
--          icon: 'i-lucide-mailbox',
--          activeOn: ['conversation_through_inbox'],
-+          expanded: true,
-+          children: [
-+            {
-+              name: "DisparoWhatsApp",
-+              label: "Disparo WhatsApp",
-+              icon: "i-lucide-message-square",
-+              to: accountScopedRoute("clientes_disparo"),
-+              activeOn: ["clientes_disparo"],
-+            },
-+            {
-+              name: "NovaCampanha",
-+              label: "Nova Campanha",
-+              icon: "i-lucide-plus-circle",
-+              to: accountScopedRoute("clientes_campanhas"),
-+              activeOn: ["clientes_campanhas"],
-+            },
-+            {
-+              name: "ReprocessarFila",
-+              label: "Reprocessar Fila",
-+              icon: "i-lucide-refresh-cw",
-+              to: accountScopedRoute("clientes_fila"),
-+              query: { reprocessar: "1" },
-+            },
-+          ],
-+        },
-+      ],
-+    },
-+
-+    // ============================================================
-+    // CONVERSAS
-+    // ============================================================
-+    {
-+      name: "Conversas",
-+      label: "CONVERSAS",
-+      icon: "i-lucide-message-circle",
-+      collapsible: true,
-+      showTreeLine: true,
-+      expanded: true,
-+      children: [
-+        {
-+          name: "Minhas",
-+          label: "Minhas",
-+          icon: "i-lucide-inbox",
-+          badgeCount: minhasCount,
-+          activeOn: ["conversation_through_participating"],
-+          to: accountScopedRoute("conversation_participating"),
-+        },
-+        {
-+          name: "NaoAtribuidas",
-+          label: "Não atribuídas",
-+          icon: "i-lucide-user-minus",
-+          badgeCount: naoAtribuidasCount,
-+          activeOn: ["conversation_through_unattended"],
-+          to: accountScopedRoute("conversation_unattended"),
-+        },
-+        {
-+          name: "Todas",
-+          label: "Todas",
-+          icon: "i-lucide-message-square",
++          name: 'Todas',
++          label: 'Todas',
++          icon: 'i-lucide-message-square',
 +          badgeCount: todasCount,
-+          activeOn: ["inbox_conversation", "inbox_view_conversation"],
-+          to: accountScopedRoute("home"),
++          activeOn: ['inbox_conversation', 'inbox_view_conversation'],
++          to: accountScopedRoute('home'),
 +        },
 +      ],
 +    },
 +  ];
 +
-+  // ============================================================
-+  // AVANÇADO (só admin)
-+  // ============================================================
 +  if (isAdmin) {
 +    baseItems.push({
-+      name: "Avancado",
-+      label: "AVANÇADO",
-+      icon: "i-lucide-settings",
++      name: 'Avancado',
++      label: 'AVANÇADO',
++      icon: 'i-lucide-settings',
 +      collapsible: true,
 +      showTreeLine: true,
-+      expanded: false,
 +      children: [
 +        {
-+          name: "Canais",
-+          label: "Canais",
-+          icon: "i-lucide-mailbox",
-+          activeOn: ["conversation_through_inbox"],
++          name: 'Canais',
++          label: 'Canais',
+           icon: 'i-lucide-mailbox',
+           activeOn: ['conversation_through_inbox'],
            ...buildSortConfig(SIDEBAR_SORT_SECTIONS.CHANNELS),
            collapsible: true,
            showTreeLine: true,
-           children: sortedInboxes.value.map(inbox => ({
-             name: `${inbox.name}-${inbox.id}`,
-             label: inbox.name,
-             badgeCount: getInboxUnreadCount.value(inbox.id),
--            icon: h(ChannelIcon, { inbox, class: 'size-[16px]' }),
--            to: accountScopedRoute('inbox_dashboard', { inbox_id: inbox.id }),
-+            icon: h(ChannelIcon, { inbox, class: "size-[16px]" }),
-+            to: accountScopedRoute("inbox_dashboard", { inbox_id: inbox.id }),
-             component: leafProps =>
-               h(ChannelLeaf, {
-                 label: leafProps.label,
-                 active: leafProps.active,
-                 inbox,
+@@ -476,480 +518,46 @@
                  badgeCount: leafProps.badgeCount,
                }),
            })),
@@ -278,12 +240,10 @@ diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/
          {
 -          name: 'Labels',
 -          label: t('SIDEBAR.LABELS'),
--          icon: 'i-lucide-tag',
--          activeOn: ['conversations_through_label'],
-+          name: "Etiquetas",
-+          label: "Etiquetas",
-+          icon: "i-lucide-tag",
-+          activeOn: ["conversations_through_label"],
++          name: 'Etiquetas',
++          label: 'Etiquetas',
+           icon: 'i-lucide-tag',
+           activeOn: ['conversations_through_label'],
            ...buildSortConfig(SIDEBAR_SORT_SECTIONS.LABELS),
            collapsible: true,
            showTreeLine: true,
@@ -291,24 +251,26 @@ diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/
              name: `${label.title}-${label.id}`,
              label: label.title,
              badgeCount: getLabelUnreadCount.value(label.id),
--            icon: h('span', {
+             icon: h('span', {
 -              class: `size-[8px] rounded-sm`,
-+            icon: h("span", {
-+              class: "size-[8px] rounded-sm",
++              class: 'size-[8px] rounded-sm',
                style: { backgroundColor: label.color },
              }),
--            to: accountScopedRoute('label_conversations', {
--              label: label.title,
--            }),
-+            to: accountScopedRoute("label_conversations", { label: label.title }),
+             to: accountScopedRoute('label_conversations', {
+               label: label.title,
+             }),
            })),
          },
 +        {
-+          name: "Configuracoes",
-+          label: "Configurações",
-+          icon: "i-lucide-bolt",
-+          to: accountScopedRoute("general_settings_index"),
-+          activeOn: ["general_settings_index", "agent_list", "settings_inbox_list"],
++          name: 'Configuracoes',
++          label: 'Configurações',
++          icon: 'i-lucide-bolt',
++          to: accountScopedRoute('general_settings_index'),
++          activeOn: [
++            'general_settings_index',
++            'agent_list',
++            'settings_inbox_list',
++          ],
 +        },
        ],
 -    },
@@ -760,16 +722,12 @@ diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/
 -      ],
 -    },
 -  ];
--});
 +    });
 +  }
 +
 +  return baseItems;
-+});
-+
-+;
+ });
  </script>
  
  <template>
    <aside
-     v-on-click-outside="[
