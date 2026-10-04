@@ -1,0 +1,33 @@
+diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+--- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
++++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+@@ -376,11 +376,28 @@
+       `/clientes/api/fila?operador=${encodeURIComponent(email)}`,
+       { credentials: 'include' }
+     );
+     if (!resp.ok) return;
+     const dados = await resp.json();
+-    meuDiaCount.value = Array.isArray(dados) ? dados.length : 0;
++    // /api/fila devolve um OBJETO com as listas da fila, nao uma lista.
++    // O numero do "Meu dia" e o total de clientes em todas elas.
++    if (Array.isArray(dados)) {
++      meuDiaCount.value = dados.length;
++    } else {
++      const listas = [
++        'agendados',
++        'atrasados',
++        'negociacao',
++        'reciclagem',
++        'desbloqueio',
++      ];
++      const soma = listas.reduce(
++        (t, k) => t + (Array.isArray(dados?.[k]) ? dados[k].length : 0),
++        0
++      );
++      meuDiaCount.value = soma || dados?.contadores?.total || 0;
++    }
+   } catch (e) {
+     // contador e cosmetico: se falhar o menu continua funcionando
+   }
+ };
+ 
