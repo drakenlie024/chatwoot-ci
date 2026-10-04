@@ -1,24 +1,29 @@
 diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 --- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 +++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
-@@ -1,8 +1,8 @@
+@@ -1,8 +1,12 @@
  <script setup>
- import { h, ref, computed, onMounted, watch } from 'vue';
+-import { h, ref, computed, onMounted, watch } from 'vue';
 -import { provideSidebarContext, useSidebarResize } from './provider';
-+import { provideSidebarContext, useSidebarResize, useSidebarContext } from './provider';
++import { h, ref, computed, onMounted, onUnmounted, watch } from 'vue';
++import {
++  provideSidebarContext,
++  useSidebarResize,
++  useSidebarContext,
++} from './provider';
  import { useAccount } from 'dashboard/composables/useAccount';
  import { useConfig } from 'dashboard/composables/useConfig';
  import { useKbd } from 'dashboard/composables/utils/useKbd';
  import { useMapGetter } from 'dashboard/composables/store';
  import { useStore } from 'vuex';
-@@ -357,10 +357,17 @@
-     activeOn: ['team_reports_show'],
-   },
- ];
- 
- const reportRoutes = computed(() => newReportRoutes());
+@@ -388,10 +392,17 @@
+   timerMeuDia = setInterval(buscarMeuDia, 60000);
+ });
+ onUnmounted(() => {
+   if (timerMeuDia) clearInterval(timerMeuDia);
+ });
 +
-+// O menu mockup quer OPERACAO e CONVERSAS sempre visiveis. O SidebarGroup
++// O menu mockup quer OPERAÇÃO e CONVERSAS sempre visiveis. O SidebarGroup
 +// guarda o estado de qual grupo esta aberto no PROVIDER (nao no menuItems),
 +// entao e aqui que se declara o grupo inicial. A sidebar continua deixando o
 +// operador abrir/fechar clickando no cabecalho.
@@ -26,6 +31,6 @@ diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/
 +setExpandedItem('Conversas');
  
  const menuItems = computed(() => {
-   // Verifica se é admin
-   const currentUser = store.getters.getCurrentUser;
-   const isAdmin = currentUser?.role === "administrator" || currentUser?.role === "account_administrator";
+   const isAdmin =
+     store.getters.getCurrentUser?.role === 'administrator' ||
+     store.getters.getCurrentUser?.role === 'account_administrator';
