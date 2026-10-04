@@ -1,7 +1,7 @@
 diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 --- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 +++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
-@@ -362,598 +362,217 @@
+@@ -359,611 +359,217 @@
  ];
  
  const reportRoutes = computed(() => newReportRoutes());
@@ -490,44 +490,57 @@ diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/
 -      ],
 -    },
 -    {
--      name: 'Clientes',
--      label: 'Clientes',
--      icon: 'i-lucide-users',
+-      name: 'Reports',
+-      label: t('SIDEBAR.REPORTS'),
+-      icon: 'i-lucide-chart-spline',
 -      children: [
 -        {
--          name: 'ClientesBusca',
--          label: 'Buscar cliente',
--          to: accountScopedRoute('clientes_busca'),
+-          name: 'Report Overview',
+-          label: t('SIDEBAR.REPORTS_OVERVIEW'),
+-          to: accountScopedRoute('account_overview_reports'),
 -        },
 -        {
--          name: 'ClientesLista',
--          label: 'Lista de clientes',
--          to: accountScopedRoute('clientes_index'),
+-          name: 'Report Conversation',
+-          label: t('SIDEBAR.REPORTS_CONVERSATION'),
+-          to: accountScopedRoute('conversation_reports'),
+-        },
+-        ...reportRoutes.value,
+-        {
+-          name: 'Reports CSAT',
+-          label: t('SIDEBAR.CSAT'),
+-          to: accountScopedRoute('csat_reports'),
 -        },
 -        {
--          name: 'ClientesFila',
--          label: 'Meu dia',
--          to: accountScopedRoute('clientes_fila'),
+-          name: 'Reports SLA',
+-          label: t('SIDEBAR.REPORTS_SLA'),
+-          to: accountScopedRoute('sla_reports'),
 -        },
 -        {
--          name: 'ClientesNegociacao',
--          label: 'Em negociação',
--          to: accountScopedRoute('clientes_negociacao'),
+-          name: 'Reports Bot',
+-          label: t('SIDEBAR.REPORTS_BOT'),
+-          to: accountScopedRoute('bot_reports'),
+-        },
+-      ],
+-    },
+-    {
+-      name: 'Campaigns',
+-      label: t('SIDEBAR.CAMPAIGNS'),
+-      icon: 'i-lucide-megaphone',
+-      children: [
+-        {
+-          name: 'Live chat',
+-          label: t('SIDEBAR.LIVE_CHAT'),
+-          to: accountScopedRoute('campaigns_livechat_index'),
 -        },
 -        {
--          name: 'ClientesRelatorios',
--          label: 'Relatórios',
--          to: accountScopedRoute('clientes_relatorios'),
+-          name: 'SMS',
+-          label: t('SIDEBAR.SMS'),
+-          to: accountScopedRoute('campaigns_sms_index'),
 -        },
 -        {
--          name: 'ClientesCampanhas',
--          label: 'Campanhas',
--          to: accountScopedRoute('clientes_campanhas'),
--        },
--        {
--          name: 'ClientesDisparo',
--          label: 'Disparo',
--          to: accountScopedRoute('clientes_disparo'),
+-          name: 'WhatsApp',
+-          label: t('SIDEBAR.WHATSAPP'),
+-          to: accountScopedRoute('campaigns_whatsapp_index'),
 -        },
 -      ],
 -    },
