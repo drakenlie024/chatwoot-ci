@@ -1,0 +1,41 @@
+diff --git a/app/javascript/dashboard/components-next/NewConversation/components/ComposeNewConversationForm.vue b/app/javascript/dashboard/components-next/NewConversation/components/ComposeNewConversationForm.vue
+index f781333..c7fc89e 100644
+--- a/app/javascript/dashboard/components-next/NewConversation/components/ComposeNewConversationForm.vue
++++ b/app/javascript/dashboard/components-next/NewConversation/components/ComposeNewConversationForm.vue
+@@ -363,8 +363,9 @@ useKeyboardEvents({
+ 
+ <template>
+   <div
+-    class="w-full md:w-[42rem] divide-y divide-n-strong overflow-visible transition-all duration-300 ease-in-out top-full flex flex-col bg-n-alpha-3 border border-n-strong shadow-sm backdrop-blur-[100px] rounded-xl min-w-0 max-h-[calc(100vh-8rem)]"
++    class="fp-modal w-full md:w-[42rem] divide-y divide-n-strong overflow-visible transition-all duration-300 ease-in-out top-full flex flex-col min-w-0 max-h-[calc(100vh-8rem)]"
+   >
++    <div class="fp-modal-head">Nova conversa</div>
+     <div class="flex-1 overflow-y-auto divide-y divide-n-strong">
+       <ContactSelector
+         :contacts="contacts"
+@@ -463,3 +464,25 @@ useKeyboardEvents({
+     />
+   </div>
+ </template>
++
++<style scoped>
++/* Modal de nova conversa no padrao do guia de identidade. */
++.fp-modal {
++  background: var(--fp-card, #fff);
++  border: 1px solid var(--fp-borda, #e2e9f5);
++  border-radius: 16px;
++  box-shadow: 0 24px 60px rgba(16, 24, 40, 0.24);
++  backdrop-filter: none;
++  overflow: hidden;
++}
++.fp-modal-head {
++  padding: 14px 18px;
++  font-size: 12px;
++  font-weight: 800;
++  letter-spacing: 0.06em;
++  text-transform: uppercase;
++  color: var(--fp-suave, #6b7a90);
++  border-bottom: 1px solid var(--fp-borda, #e2e9f5);
++  background: var(--fp-card, #fff);
++}
++</style>
