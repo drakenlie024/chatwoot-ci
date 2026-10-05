@@ -256,3 +256,84 @@ index bc7aa62..3db1b82 100644
 +  box-shadow: inset 3px 0 0 0 var(--fp-azul, #2b7fe0) !important;
 +}
 +</style>
+diff --git a/app/javascript/dashboard/components/widgets/conversation/conversationCardComponents/CardLabels.vue b/app/javascript/dashboard/components/widgets/conversation/conversationCardComponents/CardLabels.vue
+index c07c730..f71a96f 100644
+--- a/app/javascript/dashboard/components/widgets/conversation/conversationCardComponents/CardLabels.vue
++++ b/app/javascript/dashboard/components/widgets/conversation/conversationCardComponents/CardLabels.vue
+@@ -12,6 +12,16 @@ const props = defineProps({
+ const slots = useSlots();
+ const accountLabels = useMapGetter('labels/getLabels');
+ 
++// Fundo da pilula: a cor da etiqueta clareada ate virar um pastel, igual ao
++// .tag do guia de identidade (fundo suave + texto colorido + ponto).
++const fpSoft = hex => {
++  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
++  if (!m) return 'rgba(107, 122, 144, 0.14)';
++  const n = parseInt(m[1], 16);
++  const mix = c => Math.round(c + (255 - c) * 0.86);
++  return 'rgb(' + mix((n >> 16) & 255) + ',' + mix((n >> 8) & 255) + ',' + mix(n & 255) + ')';
++};
++
+ const activeLabels = computed(() => {
+   return accountLabels.value.filter(({ title }) =>
+     props.conversationLabels.includes(title)
+@@ -66,19 +76,19 @@ const onShowLabels = e => {
+       :class="{ 'h-auto overflow-visible flex-row flex-wrap': showAllLabels }"
+     >
+       <slot name="before" />
+-      <woot-label
++      <span
+         v-for="(label, index) in activeLabels"
+         :key="label ? label.id : index"
+-        :title="label.title"
+-        :description="label.description"
+-        :color="label.color"
+-        variant="smooth"
+-        class="!mb-0 max-w-[calc(100%-0.5rem)]"
+-        small
++        class="label fp-list-tag !mb-0 max-w-[calc(100%-0.5rem)]"
++        :style="{ color: label.color, backgroundColor: fpSoft(label.color) }"
++        :title="label.description"
+         :class="{
+           'invisible absolute': !showAllLabels && index > labelPosition,
+         }"
+-      />
++      >
++        <span class="fp-list-dot" :style="{ backgroundColor: label.color }" />
++        <span class="fp-list-name">{{ label.title }}</span>
++      </span>
+       <button
+         v-if="showExpandLabelButton"
+         :title="
+@@ -97,3 +107,31 @@ const onShowLabels = e => {
+     </div>
+   </div>
+ </template>
++
++<style scoped>
++/* Etiqueta da lista no padrao do guia de identidade (pilula + ponto). */
++.label.fp-list-tag {
++  display: inline-flex;
++  align-items: center;
++  gap: 5px;
++  font-size: 10px !important;
++  font-weight: 800 !important;
++  line-height: 1;
++  padding: 3px 8px !important;
++  border-radius: 99px !important;
++  border: 0 !important;
++  height: auto !important;
++  white-space: nowrap;
++}
++.fp-list-dot {
++  width: 6px;
++  height: 6px;
++  border-radius: 99px;
++  flex-shrink: 0;
++}
++.fp-list-name {
++  white-space: nowrap;
++  overflow: hidden;
++  text-overflow: ellipsis;
++}
++</style>

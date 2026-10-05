@@ -1,5 +1,5 @@
 diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
-index 0239435..1cdafed 100644
+index 0239435..5cd457d 100644
 --- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 +++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 @@ -1,10 +1,11 @@
@@ -73,7 +73,7 @@ index 0239435..1cdafed 100644
    sidebarWidth,
    isResizing,
  });
-@@ -360,103 +389,169 @@ const newReportRoutes = () => [
+@@ -360,110 +389,136 @@ const newReportRoutes = () => [
  
  const reportRoutes = computed(() => newReportRoutes());
  
@@ -129,11 +129,17 @@ index 0239435..1cdafed 100644
 +// estado de qual grupo esta aberto e o `expandedItem` (a ~20 linhas acima,
 +// que o provider recebe). Aqui so declaramos o grupo inicial; a sidebar
 +// continua deixando o operador abrir/fechar clickando no cabecalho.
-+setExpandedItem('Conversas');
++setExpandedItem('Avancado');
 +
  const menuItems = computed(() => {
 -  return [
--    {
++  // Admin pelo helper do produto (o role vive em currentAccount.role).
++  const isAdmin = checkPermissions(['administrator']);
++
++  // Menu enxuto aprovado: Conversas, Meu dia, Disparo e Avancado (so admin).
++  // Somente o Avancado tem submenu (Etiquetas e Canais).
++  const baseItems = [
+     {
 -      name: 'Inbox',
 -      label: t('SIDEBAR.INBOX'),
 -      icon: 'i-lucide-inbox',
@@ -142,24 +148,45 @@ index 0239435..1cdafed 100644
 -      getterKeys: {
 -        count: 'notifications/getUnreadCount',
 -      },
--    },
-+  // Admin pelo helper do produto. O `role` vive em `currentAccount.role`
-+  // (dentro de user.accounts[]); no topo do usuario ele nao existe, entao
-+  // comparar `getCurrentUser.role` dava sempre falso e o AVANÇADO sumia.
-+  const isAdmin = checkPermissions(['administrator']);
-+
-+  const minhasCount = allUnreadCount.value;
-+  const naoAtribuidasCount = unattendedUnreadCount.value;
-+  const todasCount = hasFilteredUnreadCounts.value ? allUnreadCount.value : 0;
-+
-+  const baseItems = [
++      name: 'Conversas',
++      label: 'Conversas',
++      icon: 'i-lucide-message-circle',
++      to: accountScopedRoute('home'),
++      activeOn: [
++        'inbox_conversation',
++        'inbox_view_conversation',
++        'conversation_through_participating',
++        'conversation_through_unattended',
++      ],
++      badgeCount: allUnreadCount.value,
+     },
      {
 -      name: 'Conversation',
 -      label: t('SIDEBAR.CONVERSATIONS'),
 -      icon: 'i-lucide-message-circle',
-+      name: 'Operacao',
-+      label: 'OPERAÇÃO',
-+      icon: 'i-lucide-briefcase',
++      name: 'MeuDia',
++      label: 'Meu dia',
++      icon: 'i-lucide-calendar-day',
++      to: accountScopedRoute('clientes_fila'),
++      activeOn: ['clientes_fila', 'clientes_busca', 'clientes_index'],
++      badgeCount: meuDiaCount.value,
++    },
++    {
++      name: 'Disparo',
++      label: 'Disparo',
++      icon: 'i-lucide-send',
++      to: accountScopedRoute('clientes_disparo'),
++      activeOn: ['clientes_disparo'],
++    },
++  ];
++
++  if (isAdmin) {
++    baseItems.push({
++      name: 'Avancado',
++      label: 'Avançado',
++      icon: 'i-lucide-settings',
++      collapsible: true,
++      showTreeLine: true,
        children: [
          {
 -          name: 'All',
@@ -168,21 +195,8 @@ index 0239435..1cdafed 100644
 -          badgeCount: allUnreadCount.value,
 -          activeOn: ['inbox_conversation'],
 -          to: accountScopedRoute('home'),
-+          name: 'Clientes',
-+          label: 'Clientes',
-+          icon: 'i-lucide-users',
-+          to: accountScopedRoute('clientes_fila'),
-+          activeOn: ['clientes_fila', 'clientes_busca', 'clientes_index'],
-+          badgeCount: meuDiaCount.value,
-+        },
-+        {
-+          name: 'MeuDiaHoje',
-+          label: 'Meu dia de hoje',
-+          icon: 'i-lucide-calendar-day',
-+          to: accountScopedRoute('clientes_fila'),
-+          activeOn: ['clientes_fila'],
-         },
-         {
+-        },
+-        {
 -          name: 'Mentions',
 -          label: t('SIDEBAR.MENTIONED_CONVERSATIONS'),
 -          icon: 'i-lucide-at-sign',
@@ -191,73 +205,28 @@ index 0239435..1cdafed 100644
 -            : 0,
 -          activeOn: ['conversation_through_mentions'],
 -          to: accountScopedRoute('conversation_mentions'),
-+          name: 'Disparo',
-+          label: 'DISPARO',
-+          icon: 'i-lucide-send',
-+          collapsible: true,
-+          showTreeLine: true,
-+          children: [
-+            {
-+              name: 'DisparoWhatsApp',
-+              label: 'Disparo WhatsApp',
-+              icon: 'i-lucide-message-square',
-+              to: accountScopedRoute('clientes_disparo'),
-+              activeOn: ['clientes_disparo'],
-+            },
-+            {
-+              name: 'NovaCampanha',
-+              label: 'Nova Campanha',
-+              icon: 'i-lucide-plus-circle',
-+              to: accountScopedRoute('clientes_campanhas'),
-+              activeOn: ['clientes_campanhas'],
-+            },
-+            {
-+              name: 'ReprocessarFila',
-+              label: 'Reprocessar Fila',
-+              icon: 'i-lucide-refresh-cw',
-+              to: accountScopedRoute('clientes_fila'),
-+              query: { reprocessar: '1' },
-+            },
-+          ],
-         },
-+      ],
-+    },
-+    {
-+      name: 'Conversas',
-+      label: 'CONVERSAS',
-+      icon: 'i-lucide-message-circle',
-+      collapsible: true,
-+      showTreeLine: true,
-+      children: [
-         {
+-        },
+-        {
 -          name: 'Participating',
 -          label: t('SIDEBAR.PARTICIPATING_CONVERSATIONS'),
 -          icon: 'i-lucide-user-round-check',
 -          badgeCount: hasFilteredUnreadCounts.value
 -            ? participatingUnreadCount.value
 -            : 0,
-+          name: 'Minhas',
-+          label: 'Minhas',
-+          icon: 'i-lucide-inbox',
-+          badgeCount: minhasCount,
-           activeOn: ['conversation_through_participating'],
-           to: accountScopedRoute('conversation_participating'),
-         },
-         {
+-          activeOn: ['conversation_through_participating'],
+-          to: accountScopedRoute('conversation_participating'),
+-        },
+-        {
 -          name: 'Unattended',
-+          name: 'NaoAtribuidas',
-+          label: 'Não atribuídas',
-+          icon: 'i-lucide-user-minus',
-+          badgeCount: naoAtribuidasCount,
-           activeOn: ['conversation_through_unattended'],
+-          activeOn: ['conversation_through_unattended'],
 -          label: t('SIDEBAR.UNATTENDED_CONVERSATIONS'),
 -          icon: 'i-lucide-clock-alert',
 -          badgeCount: hasFilteredUnreadCounts.value
 -            ? unattendedUnreadCount.value
 -            : 0,
-           to: accountScopedRoute('conversation_unattended'),
-         },
-         {
+-          to: accountScopedRoute('conversation_unattended'),
+-        },
+-        {
 -          name: 'Folders',
 -          label: t('SIDEBAR.CUSTOM_VIEWS_FOLDER'),
 -          icon: 'i-lucide-folder',
@@ -280,8 +249,13 @@ index 0239435..1cdafed 100644
 -          icon: 'i-lucide-users',
 -          activeOn: ['conversations_through_team'],
 -          ...buildSortConfig(SIDEBAR_SORT_SECTIONS.TEAMS),
--          collapsible: true,
--          showTreeLine: true,
++          name: 'Etiquetas',
++          label: 'Etiquetas',
++          icon: 'i-lucide-tag',
++          activeOn: ['conversations_through_label'],
++          ...buildSortConfig(SIDEBAR_SORT_SECTIONS.LABELS),
+           collapsible: true,
+           showTreeLine: true,
 -          children: sortedTeams.value.map(team => ({
 -            name: `${team.name}-${team.id}`,
 -            label: team.name,
@@ -294,26 +268,19 @@ index 0239435..1cdafed 100644
 -                })
 -              : undefined,
 -            to: accountScopedRoute('team_conversations', { teamId: team.id }),
--          })),
-+          name: 'Todas',
-+          label: 'Todas',
-+          icon: 'i-lucide-message-square',
-+          badgeCount: todasCount,
-+          activeOn: ['inbox_conversation', 'inbox_view_conversation'],
-+          to: accountScopedRoute('home'),
++          children: sortedLabels.value.map(label => ({
++            name: label.title + '-' + label.id,
++            label: label.title,
++            badgeCount: getLabelUnreadCount.value(label.id),
++            icon: h('span', {
++              class: 'size-[8px] rounded-sm',
++              style: { backgroundColor: label.color },
++            }),
++            to: accountScopedRoute('label_conversations', {
++              label: label.title,
++            }),
+           })),
          },
-+      ],
-+    },
-+  ];
-+
-+  if (isAdmin) {
-+    baseItems.push({
-+      name: 'Avancado',
-+      label: 'AVANÇADO',
-+      icon: 'i-lucide-settings',
-+      collapsible: true,
-+      showTreeLine: true,
-+      children: [
          {
 -          name: 'Channels',
 -          label: t('SIDEBAR.CHANNELS'),
@@ -322,31 +289,40 @@ index 0239435..1cdafed 100644
            icon: 'i-lucide-mailbox',
            activeOn: ['conversation_through_inbox'],
            ...buildSortConfig(SIDEBAR_SORT_SECTIONS.CHANNELS),
-@@ -478,8 +573,8 @@ const menuItems = computed(() => {
+           collapsible: true,
+           showTreeLine: true,
+           children: sortedInboxes.value.map(inbox => ({
+-            name: `${inbox.name}-${inbox.id}`,
++            name: inbox.name + '-' + inbox.id,
+             label: inbox.name,
+             badgeCount: getInboxUnreadCount.value(inbox.id),
+             icon: h(ChannelIcon, { inbox, class: 'size-[16px]' }),
+@@ -477,477 +532,11 @@ const menuItems = computed(() => {
+               }),
            })),
          },
-         {
+-        {
 -          name: 'Labels',
 -          label: t('SIDEBAR.LABELS'),
-+          name: 'Etiquetas',
-+          label: 'Etiquetas',
-           icon: 'i-lucide-tag',
-           activeOn: ['conversations_through_label'],
-           ...buildSortConfig(SIDEBAR_SORT_SECTIONS.LABELS),
-@@ -490,7 +585,7 @@ const menuItems = computed(() => {
-             label: label.title,
-             badgeCount: getLabelUnreadCount.value(label.id),
-             icon: h('span', {
+-          icon: 'i-lucide-tag',
+-          activeOn: ['conversations_through_label'],
+-          ...buildSortConfig(SIDEBAR_SORT_SECTIONS.LABELS),
+-          collapsible: true,
+-          showTreeLine: true,
+-          children: sortedLabels.value.map(label => ({
+-            name: `${label.title}-${label.id}`,
+-            label: label.title,
+-            badgeCount: getLabelUnreadCount.value(label.id),
+-            icon: h('span', {
 -              class: `size-[8px] rounded-sm`,
-+              class: 'size-[8px] rounded-sm',
-               style: { backgroundColor: label.color },
-             }),
-             to: accountScopedRoute('label_conversations', {
-@@ -498,456 +593,22 @@ const menuItems = computed(() => {
-             }),
-           })),
-         },
--      ],
+-              style: { backgroundColor: label.color },
+-            }),
+-            to: accountScopedRoute('label_conversations', {
+-              label: label.title,
+-            }),
+-          })),
+-        },
+       ],
 -    },
 -    {
 -      name: 'Captain',
@@ -482,7 +458,7 @@ index 0239435..1cdafed 100644
 -            ],
 -          })),
 -        },
-         {
+-        {
 -          name: 'Tagged With',
 -          icon: 'i-lucide-tag',
 -          label: t('SIDEBAR.TAGGED_WITH'),
@@ -636,10 +612,7 @@ index 0239435..1cdafed 100644
 -          name: 'Settings Account Settings',
 -          label: t('SIDEBAR.ACCOUNT_SETTINGS'),
 -          icon: 'i-lucide-briefcase',
-+          name: 'Configuracoes',
-+          label: 'Configurações',
-+          icon: 'i-lucide-bolt',
-           to: accountScopedRoute('general_settings_index'),
+-          to: accountScopedRoute('general_settings_index'),
 -        },
 -        // {
 -        //   name: 'Settings Captain',
@@ -692,16 +665,14 @@ index 0239435..1cdafed 100644
 -          name: 'Settings Inboxes',
 -          label: t('SIDEBAR.INBOXES'),
 -          icon: 'i-lucide-inbox',
-           activeOn: [
-+            'general_settings_index',
-+            'agent_list',
-             'settings_inbox_list',
+-          activeOn: [
+-            'settings_inbox_list',
 -            'settings_inbox_show',
 -            'settings_inbox_new',
 -            'settings_inbox_finish',
 -            'settings_inboxes_page_channel',
 -            'settings_inboxes_add_agents',
-           ],
+-          ],
 -          to: accountScopedRoute('settings_inbox_list'),
 -        },
 -        {
@@ -797,8 +768,8 @@ index 0239435..1cdafed 100644
 -          label: t('SIDEBAR.BILLING'),
 -          icon: 'i-lucide-credit-card',
 -          to: accountScopedRoute('billing_settings_index'),
-         },
-       ],
+-        },
+-      ],
 -    },
 -  ];
 +    });
@@ -808,7 +779,7 @@ index 0239435..1cdafed 100644
  });
  </script>
  
-@@ -966,26 +627,35 @@ const menuItems = computed(() => {
+@@ -966,26 +555,35 @@ const menuItems = computed(() => {
      class="bg-n-background flex flex-col text-sm pb-px fixed top-0 ltr:left-0 rtl:right-0 h-full z-40 w-[200px] md:w-auto md:relative md:flex-shrink-0 md:ltr:translate-x-0 md:rtl:translate-x-0 ltr:border-r rtl:border-l border-n-weak"
      :class="[
        {
@@ -849,7 +820,7 @@ index 0239435..1cdafed 100644
            <SidebarAccountSwitcher
              is-collapsed
              @show-create-account-modal="emit('showCreateAccountModal')"
-@@ -1004,11 +674,11 @@ const menuItems = computed(() => {
+@@ -1004,11 +602,11 @@ const menuItems = computed(() => {
        </div>
        <div
          class="flex gap-2"
@@ -864,7 +835,7 @@ index 0239435..1cdafed 100644
            class="flex gap-2 items-center px-2 py-1 w-full h-7 rounded-lg outline outline-1 outline-n-weak bg-n-button-color transition-all duration-100 ease-out"
          >
            <span class="flex-shrink-0 i-lucide-search size-4 text-n-slate-10" />
-@@ -1023,37 +693,30 @@ const menuItems = computed(() => {
+@@ -1023,37 +621,30 @@ const menuItems = computed(() => {
          </RouterLink>
          <RouterLink
            v-else
@@ -914,7 +885,7 @@ index 0239435..1cdafed 100644
        >
          <SidebarGroup
            v-for="item in menuItems"
-@@ -1072,22 +735,22 @@ const menuItems = computed(() => {
+@@ -1072,22 +663,22 @@ const menuItems = computed(() => {
          v-if="
            isOnChatwootCloud &&
            !isACustomBrandedInstance &&
@@ -941,7 +912,7 @@ index 0239435..1cdafed 100644
            @open-key-shortcut-modal="emit('openKeyShortcutModal')"
          />
        </div>
-@@ -1104,5 +767,34 @@ const menuItems = computed(() => {
+@@ -1104,5 +695,34 @@ const menuItems = computed(() => {
          :class="{ 'bg-n-brand': isResizing }"
        />
      </div>
