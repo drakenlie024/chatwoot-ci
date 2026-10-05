@@ -1,0 +1,77 @@
+diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+index f1ddc2e..799c2c8 100644
+--- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
++++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+@@ -156,13 +156,14 @@ const isEffectivelyCollapsed = computed(
+ const hoverTrilho = ref(false);
+ const LARGURA_HOVER = 220;
+ const larguraSidebar = computed(() =>
+-  !isMobile.value && hoverTrilho.value ? LARGURA_HOVER : sidebarWidth.value
++  !isMobile.value && hoverTrilho.value && isCollapsed.value
++    ? LARGURA_HOVER
++    : sidebarWidth.value
+ );
+-const aoEntrarTrilho = () => {
+-  if (!isMobile.value && isCollapsed.value) hoverTrilho.value = true;
+-};
+-const aoSairTrilho = () => {
+-  hoverTrilho.value = false;
++// O trilho abre/fecha por BOTAO (nao mais por hover).
++const alternarTrilho = () => {
++  if (isMobile.value) return;
++  hoverTrilho.value = !hoverTrilho.value;
+ };
+ 
+ // Enquanto o trilho esta aberto no hover, o conteudo interno (rotulos, nome
+@@ -620,11 +621,9 @@ const menuItems = computed(() => {
+       },
+     ]"
+     class="bg-n-background flex flex-col text-sm pb-px fixed top-0 ltr:left-0 rtl:right-0 h-full z-40 w-[200px] md:w-auto md:relative md:flex-shrink-0 md:ltr:translate-x-0 md:rtl:translate-x-0 ltr:border-r rtl:border-l border-n-weak"
+-    @mouseenter="aoEntrarTrilho"
+-    @mouseleave="aoSairTrilho"
+     :class="[
+       {
+-        'fp-trilho-hover': hoverTrilho && !isMobile,
++        'fp-trilho-hover': hoverTrilho && !isMobile && isCollapsed,
+         'shadow-lg md:shadow-none': isMobileSidebarOpen,
+         'ltr:-translate-x-full rtl:translate-x-full': !isMobileSidebarOpen,
+         'transition-transform duration-200 ease-out md:transition-[width]':
+@@ -637,6 +636,14 @@ const menuItems = computed(() => {
+       class="grid"
+       :class="recolhidoParaRender ? 'mt-3 mb-6 gap-4' : 'mt-1 mb-4 gap-2'"
+     >
++      <button
++        type="button"
++        class="fp-trilho-btn"
++        :title="hoverTrilho ? 'Fechar menu' : 'Abrir menu'"
++        @click="alternarTrilho"
++      >
++        <span class="i-lucide-menu size-4" />
++      </button>
+       <div
+         class="flex gap-2 items-center min-w-0"
+         :class="{
+@@ -767,6 +774,23 @@ const menuItems = computed(() => {
+ </template>
+ 
+ <style scoped>
++/* Botao que abre/fecha o trilho (no lugar do hover). */
++.fp-trilho-btn {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  width: 32px;
++  height: 32px;
++  margin: 0 auto;
++  border: 0;
++  border-radius: 9px;
++  background: transparent;
++  color: rgba(255, 255, 255, 0.9);
++  cursor: pointer;
++}
++.fp-trilho-btn:hover {
++  background: rgba(255, 255, 255, 0.16);
++}
+ /* Trilho: recolhida, ao passar o mouse o box cresce e a margem negativa
+    mantEM o espaco de 56px no layout - ou seja, expande POR CIMA, sem
+    empurrar a lista de conversas (mockup 12). */
