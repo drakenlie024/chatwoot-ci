@@ -1,0 +1,46 @@
+diff --git a/app/javascript/dashboard/components-next/Conversation/ConversationCard/ConversationCard.vue b/app/javascript/dashboard/components-next/Conversation/ConversationCard/ConversationCard.vue
+index 1d76ae2..1e7877a 100644
+--- a/app/javascript/dashboard/components-next/Conversation/ConversationCard/ConversationCard.vue
++++ b/app/javascript/dashboard/components-next/Conversation/ConversationCard/ConversationCard.vue
+@@ -72,6 +72,13 @@ const showMessagePreviewWithoutMeta = computed(() => {
+   );
+ });
+ 
++// A conversa aberta ganha a tinta do guia (degrade + barra a esquerda).
++const isActive = computed(
++  () =>
++    String(route.params.conversationId || '') ===
++    String(props.conversation.id)
++);
++
+ const onCardClick = e => {
+   const path = frontendURL(
+     conversationUrl({
+@@ -95,7 +102,8 @@ const onCardClick = e => {
+ <template>
+   <div
+     role="button"
+-    class="flex w-full gap-3 px-3 py-4 transition-all duration-300 ease-in-out cursor-pointer"
++    class="flex w-full gap-3 px-3 py-4 transition-all duration-300 ease-in-out cursor-pointer fp-conv"
++    :class="{ 'fp-conv-on': isActive }"
+     @click="onCardClick"
+   >
+     <Avatar
+@@ -147,3 +155,17 @@ const onCardClick = e => {
+     </div>
+   </div>
+ </template>
++
++<style scoped>
++/* Cartao da lista no padrao do guia de identidade. */
++.fp-conv {
++  border-bottom: 1px solid var(--fp-borda);
++}
++.fp-conv:hover {
++  background: var(--fp-azul-soft);
++}
++.fp-conv-on {
++  background: linear-gradient(135deg, var(--fp-selo-a), var(--fp-selo-b));
++  box-shadow: inset 3px 0 0 0 var(--fp-azul);
++}
++</style>
