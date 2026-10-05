@@ -151,12 +151,13 @@ index 89b01cb..59f6e33 100644
  </template>
 diff --git a/app/javascript/dashboard/components/widgets/conversation/FpActions.vue b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
 new file mode 100644
-index 0000000..e3cf033
+index 0000000..114c99c
 --- /dev/null
 +++ b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
-@@ -0,0 +1,169 @@
+@@ -0,0 +1,176 @@
 +<script setup>
-+import { computed } from 'vue';
++import { computed, ref } from 'vue';
++import FpTabular from './FpTabular.vue';
 +import { useStore } from 'vuex';
 +import { useUISettings } from 'dashboard/composables/useUISettings';
 +
@@ -168,6 +169,7 @@ index 0000000..e3cf033
 +});
 +
 +const store = useStore();
++const tabularAberto = ref(false);
 +const { updateUISettings } = useUISettings();
 +
 +const contact = computed(
@@ -223,7 +225,7 @@ index 0000000..e3cf033
 +    rot: 'Tabular rápido',
 +    curto: 'Tabular',
 +    ic: 'i-lucide-clipboard-check',
-+    run: () => enviarAcao('tabular'),
++    run: () => (tabularAberto.value = true),
 +  },
 +  {
 +    rot: 'Ficha do cliente',
@@ -263,6 +265,11 @@ index 0000000..e3cf033
 +      <span class="fp-b-tx">{{ a.curto }}</span>
 +    </button>
 +  </div>
++  <FpTabular
++    v-if="tabularAberto"
++    :chat="props.chat"
++    @close="tabularAberto = false"
++  />
 +</template>
 +
 +<style scoped>
@@ -844,6 +851,88 @@ index 0000000..237188f
 +  display: block;
 +}
 +</style>
+diff --git a/app/javascript/dashboard/components/widgets/conversation/FpTabular.vue b/app/javascript/dashboard/components/widgets/conversation/FpTabular.vue
+new file mode 100644
+index 0000000..6d75fce
+--- /dev/null
++++ b/app/javascript/dashboard/components/widgets/conversation/FpTabular.vue
+@@ -0,0 +1,75 @@
++<script>
++const MENSAGEM_FECHAR = 'fp:fechar-tabular';
++const MENSAGEM_OK = 'fp:tabular-ok';
++
++export default {
++  name: 'FpTabular',
++  props: { chat: { type: Object, default: () => ({}) } },
++  emits: ['close', 'tabulated'],
++  computed: {
++    tema() {
++      return document.body.classList.contains('dark') ? 'dark' : 'light';
++    },
++    contato() {
++      const id =
++        this.chat && this.chat.meta && this.chat.meta.sender
++          ? this.chat.meta.sender.id
++          : null;
++      return id ? this.$store.getters['contacts/getContact'](id) || {} : {};
++    },
++    iframeUrl() {
++      const p = new URLSearchParams();
++      if (this.contato && this.contato.id) p.set('contact_id', String(this.contato.id));
++      if (this.contato && this.contato.name) p.set('nome', this.contato.name);
++      p.set('tema', this.tema);
++      return '/clientes/embed/tabular?' + p.toString();
++    },
++  },
++  mounted() {
++    window.addEventListener('message', this.onMessage);
++    window.addEventListener('keydown', this.onKey);
++  },
++  unmounted() {
++    window.removeEventListener('message', this.onMessage);
++    window.removeEventListener('keydown', this.onKey);
++  },
++  methods: {
++    onKey(e) {
++      if (e.key === 'Escape') this.$emit('close');
++    },
++    onMessage(event) {
++      const frame = this.$refs.frame;
++      if (!frame || frame.contentWindow !== event.source) return;
++      let d = event.data;
++      if (typeof d === 'string') {
++        try { d = JSON.parse(d); } catch (e) { return; }
++      }
++      if (!d || !d.event) return;
++      if (d.event === MENSAGEM_FECHAR) this.$emit('close');
++      else if (d.event === MENSAGEM_OK) this.$emit('tabulated', d.data || {});
++    },
++  },
++};
++</script>
++
++<template>
++  <Teleport to="body">
++    <div class="fp-tab-fundo" @click.self="$emit('close')">
++      <div class="fp-tab-caixa">
++        <button class="fp-tab-x" @click="$emit('close')" aria-label="Fechar">x</button>
++        <iframe ref="frame" :src="iframeUrl" class="fp-tab-frame" />
++      </div>
++    </div>
++  </Teleport>
++</template>
++
++<style scoped>
++.fp-tab-fundo{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10000;
++  display:flex;align-items:flex-start;justify-content:center;padding:44px 16px}
++.fp-tab-caixa{position:relative;background:#fff;border-radius:16px;overflow:hidden;
++  width:520px;max-width:100%;max-height:calc(100vh - 88px);display:flex;
++  box-shadow:0 24px 60px rgba(0,0,0,.35)}
++.fp-tab-x{position:absolute;top:8px;right:10px;z-index:2;border:0;background:transparent;
++  font-size:20px;line-height:1;cursor:pointer;color:rgba(255,255,255,.9)}
++.fp-tab-frame{width:520px;height:560px;max-width:100%;border:0;display:block}
++</style>
+\ No newline at end of file
 diff --git a/app/javascript/dashboard/components/widgets/conversation/MoreActions.vue b/app/javascript/dashboard/components/widgets/conversation/MoreActions.vue
 index 448c010..443326e 100644
 --- a/app/javascript/dashboard/components/widgets/conversation/MoreActions.vue
