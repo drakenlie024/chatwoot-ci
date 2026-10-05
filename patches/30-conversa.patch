@@ -151,10 +151,10 @@ index 89b01cb..59f6e33 100644
  </template>
 diff --git a/app/javascript/dashboard/components/widgets/conversation/FpActions.vue b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
 new file mode 100644
-index 0000000..6d5526e
+index 0000000..0e290ca
 --- /dev/null
 +++ b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
-@@ -0,0 +1,183 @@
+@@ -0,0 +1,169 @@
 +<script setup>
 +import { computed, ref } from 'vue';
 +import FpTabular from './FpTabular.vue';
@@ -203,20 +203,6 @@ index 0000000..6d5526e
 +  });
 +};
 +
-+// A acao vai para o painel FP (ConversationSidebar -> FpFrame -> iframe). Como o
-+// iframe pode estar montando ainda, repetimos por alguns segundos ate chegar.
-+const enviarAcao = acao => {
-+  abrirPainel();
-+  if (window.__fpAcaoTimer) clearInterval(window.__fpAcaoTimer);
-+  let n = 0;
-+  window.__fpAcaoTimer = setInterval(() => {
-+    window.dispatchEvent(new CustomEvent('fp:acao', { detail: { acao } }));
-+    if (++n >= 10) {
-+      clearInterval(window.__fpAcaoTimer);
-+      window.__fpAcaoTimer = null;
-+    }
-+  }, 400);
-+};
 +
 +const abrirExterno = url => {
 +  window.open(url, '_blank', 'noopener');
@@ -734,12 +720,102 @@ index 0000000..c8f319c
 +  background: #0f1319;
 +}
 +</style>
+diff --git a/app/javascript/dashboard/components/widgets/conversation/FpEmbedModal.vue b/app/javascript/dashboard/components/widgets/conversation/FpEmbedModal.vue
+new file mode 100644
+index 0000000..bb732cd
+--- /dev/null
++++ b/app/javascript/dashboard/components/widgets/conversation/FpEmbedModal.vue
+@@ -0,0 +1,83 @@
++<script>
++// Base dos modais que embutem uma pagina do painel num iframe (novo atendimento,
++// tabular, template). Cuida do Teleport pro body (a sidebar tem transform e
++// prenderia um position:fixed), do fundo, do iframe e do protocolo de
++// mensagens (fechar / ok).
++export default {
++  name: 'FpEmbedModal',
++  props: {
++    path: { type: String, required: true },
++    query: { type: Object, default: () => ({}) },
++    closeEvent: { type: String, required: true },
++    okEvent: { type: String, required: true },
++    width: { type: Number, default: 560 },
++    height: { type: Number, default: 600 },
++  },
++  emits: ['close', 'ok'],
++  computed: {
++    tema() {
++      return document.body.classList.contains('dark') ? 'dark' : 'light';
++    },
++    iframeUrl() {
++      const p = new URLSearchParams();
++      Object.keys(this.query || {}).forEach(k => {
++        const v = this.query[k];
++        if (v !== undefined && v !== null && v !== '') p.set(k, String(v));
++      });
++      p.set('tema', this.tema);
++      return this.path + '?' + p.toString();
++    },
++  },
++  mounted() {
++    window.addEventListener('message', this.onMessage);
++    window.addEventListener('keydown', this.onKey);
++  },
++  unmounted() {
++    window.removeEventListener('message', this.onMessage);
++    window.removeEventListener('keydown', this.onKey);
++  },
++  methods: {
++    onKey(e) {
++      if (e.key === 'Escape') this.$emit('close');
++    },
++    onMessage(event) {
++      const frame = this.$refs.frame;
++      if (!frame || frame.contentWindow !== event.source) return;
++      let d = event.data;
++      if (typeof d === 'string') {
++        try { d = JSON.parse(d); } catch (e) { return; }
++      }
++      if (!d || !d.event) return;
++      if (d.event === this.closeEvent) this.$emit('close');
++      else if (d.event === this.okEvent) this.$emit('ok', d.data || {});
++    },
++  },
++};
++</script>
++
++<template>
++  <Teleport to="body">
++    <div class="fp-emb-fundo" @click.self="$emit('close')">
++      <div class="fp-emb-caixa" :style="{ width: width + 'px' }">
++        <button class="fp-emb-x" @click="$emit('close')" aria-label="Fechar">x</button>
++        <iframe
++          ref="frame"
++          :src="iframeUrl"
++          class="fp-emb-frame"
++          :style="{ width: width + 'px', height: height + 'px' }"
++        />
++      </div>
++    </div>
++  </Teleport>
++</template>
++
++<style scoped>
++.fp-emb-fundo{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10000;
++  display:flex;align-items:flex-start;justify-content:center;padding:44px 16px}
++.fp-emb-caixa{position:relative;background:#fff;border-radius:16px;overflow:hidden;
++  max-width:100%;max-height:calc(100vh - 88px);display:flex;
++  box-shadow:0 24px 60px rgba(0,0,0,.35)}
++.fp-emb-x{position:absolute;top:8px;right:10px;z-index:2;border:0;background:transparent;
++  font-size:20px;line-height:1;cursor:pointer;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
++.fp-emb-frame{max-width:100%;border:0;display:block}
++</style>
+\ No newline at end of file
 diff --git a/app/javascript/dashboard/components/widgets/conversation/FpFrame.vue b/app/javascript/dashboard/components/widgets/conversation/FpFrame.vue
 new file mode 100644
-index 0000000..237188f
+index 0000000..8cdf692
 --- /dev/null
 +++ b/app/javascript/dashboard/components/widgets/conversation/FpFrame.vue
-@@ -0,0 +1,118 @@
+@@ -0,0 +1,107 @@
 +<script>
 +const FETCH_INFO_MESSAGE = 'chatwoot-dashboard-app:fetch-info';
 +const APP_CONTEXT_EVENT = 'appContext';
@@ -751,8 +827,7 @@ index 0000000..237188f
 +
 +// Painel FP Consignado embutido no lugar do painel de contato do Chatwoot.
 +// Fala o MESMO protocolo dos Dashboard Apps (Frame.vue): o iframe pede o
-+// contexto e a gente responde. Alem disso escuta o evento 'fp:acao' (vindo
-+// dos botoes do cabecalho) e repassa para o painel.
++// contexto e a gente responde.
 +export default {
 +  props: {
 +    currentChat: {
@@ -802,7 +877,6 @@ index 0000000..237188f
 +  },
 +  mounted() {
 +    window.addEventListener('message', this.onMessage);
-+    window.addEventListener('fp:acao', this.onAcao);
 +    this.themeObserver = new MutationObserver(this.onThemeChange);
 +    this.themeObserver.observe(document.body, {
 +      attributes: true,
@@ -811,7 +885,6 @@ index 0000000..237188f
 +  },
 +  unmounted() {
 +    window.removeEventListener('message', this.onMessage);
-+    window.removeEventListener('fp:acao', this.onAcao);
 +    this.themeObserver.disconnect();
 +  },
 +  methods: {
@@ -819,14 +892,6 @@ index 0000000..237188f
 +      if (event.data !== FETCH_INFO_MESSAGE) return;
 +      if (this.$refs.frame?.contentWindow !== event.source) return;
 +      this.sendContext();
-+    },
-+    onAcao(event) {
-+      const frame = this.$refs.frame;
-+      if (!frame?.contentWindow) return;
-+      frame.contentWindow.postMessage(
-+        JSON.stringify({ event: 'fp:acao', data: event.detail || {} }),
-+        '*'
-+      );
 +    },
 +    onThemeChange() {
 +      const theme = getCurrentTheme();
@@ -860,168 +925,66 @@ index 0000000..237188f
 +</style>
 diff --git a/app/javascript/dashboard/components/widgets/conversation/FpTabular.vue b/app/javascript/dashboard/components/widgets/conversation/FpTabular.vue
 new file mode 100644
-index 0000000..6d75fce
+index 0000000..7d67f09
 --- /dev/null
 +++ b/app/javascript/dashboard/components/widgets/conversation/FpTabular.vue
-@@ -0,0 +1,75 @@
-+<script>
-+const MENSAGEM_FECHAR = 'fp:fechar-tabular';
-+const MENSAGEM_OK = 'fp:tabular-ok';
+@@ -0,0 +1,25 @@
++<script setup>
++import { computed } from 'vue';
++import { useStore } from 'vuex';
++import FpEmbedModal from './FpEmbedModal.vue';
 +
-+export default {
-+  name: 'FpTabular',
-+  props: { chat: { type: Object, default: () => ({}) } },
-+  emits: ['close', 'tabulated'],
-+  computed: {
-+    tema() {
-+      return document.body.classList.contains('dark') ? 'dark' : 'light';
-+    },
-+    contato() {
-+      const id =
-+        this.chat && this.chat.meta && this.chat.meta.sender
-+          ? this.chat.meta.sender.id
-+          : null;
-+      return id ? this.$store.getters['contacts/getContact'](id) || {} : {};
-+    },
-+    iframeUrl() {
-+      const p = new URLSearchParams();
-+      if (this.contato && this.contato.id) p.set('contact_id', String(this.contato.id));
-+      if (this.contato && this.contato.name) p.set('nome', this.contato.name);
-+      p.set('tema', this.tema);
-+      return '/clientes/embed/tabular?' + p.toString();
-+    },
-+  },
-+  mounted() {
-+    window.addEventListener('message', this.onMessage);
-+    window.addEventListener('keydown', this.onKey);
-+  },
-+  unmounted() {
-+    window.removeEventListener('message', this.onMessage);
-+    window.removeEventListener('keydown', this.onKey);
-+  },
-+  methods: {
-+    onKey(e) {
-+      if (e.key === 'Escape') this.$emit('close');
-+    },
-+    onMessage(event) {
-+      const frame = this.$refs.frame;
-+      if (!frame || frame.contentWindow !== event.source) return;
-+      let d = event.data;
-+      if (typeof d === 'string') {
-+        try { d = JSON.parse(d); } catch (e) { return; }
-+      }
-+      if (!d || !d.event) return;
-+      if (d.event === MENSAGEM_FECHAR) this.$emit('close');
-+      else if (d.event === MENSAGEM_OK) this.$emit('tabulated', d.data || {});
-+    },
-+  },
-+};
++const props = defineProps({ chat: { type: Object, default: () => ({}) } });
++const store = useStore();
++const contato = computed(() => {
++  const id = props.chat && props.chat.meta && props.chat.meta.sender
++    ? props.chat.meta.sender.id
++    : null;
++  return id ? store.getters['contacts/getContact'](id) || {} : {};
++});
++const query = computed(() => ({ contact_id: contato.value.id, nome: contato.value.name }));
 +</script>
 +
 +<template>
-+  <Teleport to="body">
-+    <div class="fp-tab-fundo" @click.self="$emit('close')">
-+      <div class="fp-tab-caixa">
-+        <button class="fp-tab-x" @click="$emit('close')" aria-label="Fechar">x</button>
-+        <iframe ref="frame" :src="iframeUrl" class="fp-tab-frame" />
-+      </div>
-+    </div>
-+  </Teleport>
++  <FpEmbedModal
++    path="/clientes/embed/tabular"
++    :query="query"
++    close-event="fp:fechar-tabular"
++    ok-event="fp:tabular-ok"
++    @close="$emit('close')"
++  />
 +</template>
-+
-+<style scoped>
-+.fp-tab-fundo{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10000;
-+  display:flex;align-items:flex-start;justify-content:center;padding:44px 16px}
-+.fp-tab-caixa{position:relative;background:#fff;border-radius:16px;overflow:hidden;
-+  width:520px;max-width:100%;max-height:calc(100vh - 88px);display:flex;
-+  box-shadow:0 24px 60px rgba(0,0,0,.35)}
-+.fp-tab-x{position:absolute;top:8px;right:10px;z-index:2;border:0;background:transparent;
-+  font-size:20px;line-height:1;cursor:pointer;color:rgba(255,255,255,.9)}
-+.fp-tab-frame{width:520px;height:560px;max-width:100%;border:0;display:block}
-+</style>
-\ No newline at end of file
 diff --git a/app/javascript/dashboard/components/widgets/conversation/FpTemplate.vue b/app/javascript/dashboard/components/widgets/conversation/FpTemplate.vue
 new file mode 100644
-index 0000000..a70fcd5
+index 0000000..e45252a
 --- /dev/null
 +++ b/app/javascript/dashboard/components/widgets/conversation/FpTemplate.vue
-@@ -0,0 +1,75 @@
-+<script>
-+const MENSAGEM_FECHAR = 'fp:fechar-template';
-+const MENSAGEM_OK = 'fp:template-ok';
+@@ -0,0 +1,25 @@
++<script setup>
++import { computed } from 'vue';
++import { useStore } from 'vuex';
++import FpEmbedModal from './FpEmbedModal.vue';
 +
-+export default {
-+  name: 'FpTemplate',
-+  props: { chat: { type: Object, default: () => ({}) } },
-+  emits: ['close', 'sent'],
-+  computed: {
-+    tema() {
-+      return document.body.classList.contains('dark') ? 'dark' : 'light';
-+    },
-+    contato() {
-+      const id =
-+        this.chat && this.chat.meta && this.chat.meta.sender
-+          ? this.chat.meta.sender.id
-+          : null;
-+      return id ? this.$store.getters['contacts/getContact'](id) || {} : {};
-+    },
-+    iframeUrl() {
-+      const p = new URLSearchParams();
-+      if (this.contato && this.contato.id) p.set('contact_id', String(this.contato.id));
-+      if (this.contato && this.contato.name) p.set('nome', this.contato.name);
-+      p.set('tema', this.tema);
-+      return '/clientes/embed/template?' + p.toString();
-+    },
-+  },
-+  mounted() {
-+    window.addEventListener('message', this.onMessage);
-+    window.addEventListener('keydown', this.onKey);
-+  },
-+  unmounted() {
-+    window.removeEventListener('message', this.onMessage);
-+    window.removeEventListener('keydown', this.onKey);
-+  },
-+  methods: {
-+    onKey(e) {
-+      if (e.key === 'Escape') this.$emit('close');
-+    },
-+    onMessage(event) {
-+      const frame = this.$refs.frame;
-+      if (!frame || frame.contentWindow !== event.source) return;
-+      let d = event.data;
-+      if (typeof d === 'string') {
-+        try { d = JSON.parse(d); } catch (e) { return; }
-+      }
-+      if (!d || !d.event) return;
-+      if (d.event === MENSAGEM_FECHAR) this.$emit('close');
-+      else if (d.event === MENSAGEM_OK) this.$emit('sent', d.data || {});
-+    },
-+  },
-+};
++const props = defineProps({ chat: { type: Object, default: () => ({}) } });
++const store = useStore();
++const contato = computed(() => {
++  const id = props.chat && props.chat.meta && props.chat.meta.sender
++    ? props.chat.meta.sender.id
++    : null;
++  return id ? store.getters['contacts/getContact'](id) || {} : {};
++});
++const query = computed(() => ({ contact_id: contato.value.id, nome: contato.value.name }));
 +</script>
 +
 +<template>
-+  <Teleport to="body">
-+    <div class="fp-tpl-fundo" @click.self="$emit('close')">
-+      <div class="fp-tpl-caixa">
-+        <button class="fp-tpl-x" @click="$emit('close')" aria-label="Fechar">x</button>
-+        <iframe ref="frame" :src="iframeUrl" class="fp-tpl-frame" />
-+      </div>
-+    </div>
-+  </Teleport>
++  <FpEmbedModal
++    path="/clientes/embed/template"
++    :query="query"
++    close-event="fp:fechar-template"
++    ok-event="fp:template-ok"
++    @close="$emit('close')"
++  />
 +</template>
-+
-+<style scoped>
-+.fp-tpl-fundo{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10000;
-+  display:flex;align-items:flex-start;justify-content:center;padding:44px 16px}
-+.fp-tpl-caixa{position:relative;background:#fff;border-radius:16px;overflow:hidden;
-+  width:560px;max-width:100%;max-height:calc(100vh - 88px);display:flex;
-+  box-shadow:0 24px 60px rgba(0,0,0,.35)}
-+.fp-tpl-x{position:absolute;top:8px;right:10px;z-index:2;border:0;background:transparent;
-+  font-size:20px;line-height:1;cursor:pointer;color:#64748b}
-+.fp-tpl-frame{width:560px;height:600px;max-width:100%;border:0;display:block}
-+</style>
-\ No newline at end of file
 diff --git a/app/javascript/dashboard/components/widgets/conversation/MoreActions.vue b/app/javascript/dashboard/components/widgets/conversation/MoreActions.vue
 index 448c010..443326e 100644
 --- a/app/javascript/dashboard/components/widgets/conversation/MoreActions.vue

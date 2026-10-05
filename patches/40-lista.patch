@@ -1,14 +1,17 @@
 diff --git a/app/javascript/dashboard/components-next/Conversation/ConversationCard/CardLabels.vue b/app/javascript/dashboard/components-next/Conversation/ConversationCard/CardLabels.vue
-index dfd4115..1b77ab4 100644
+index dfd4115..8a3699c 100644
 --- a/app/javascript/dashboard/components-next/Conversation/ConversationCard/CardLabels.vue
 +++ b/app/javascript/dashboard/components-next/Conversation/ConversationCard/CardLabels.vue
-@@ -25,9 +25,12 @@ const WIDTH_CONFIG = Object.freeze({
- const containerRef = ref(null);
+@@ -1,5 +1,6 @@
+ <script setup>
+ import { ref, computed } from 'vue';
++import { chaveEtiqueta } from 'dashboard/helper/fpLabels';
+ 
+ const props = defineProps({
+   conversationLabels: {
+@@ -26,8 +27,8 @@ const containerRef = ref(null);
  const maxLabels = ref(1);
  
-+// Compara sem caixa/hifen: a etiqueta do Chatwoot pode estar gravada como
-+// 'caixa-postal' e o tag da conversa como 'Caixa-postal'.
-+const chaveEtiqueta = t => String(t || '').toLowerCase().replace(/[-_]/g, ' ');
  const activeLabels = computed(() => {
 -  const labelSet = new Set(props.conversationLabels);
 -  return props.accountLabels?.filter(({ title }) => labelSet.has(title));
@@ -17,7 +20,7 @@ index dfd4115..1b77ab4 100644
  });
  
  const calculateLabelWidth = ({ title = '' }) => {
-@@ -54,6 +57,16 @@ const visibleLabels = computed(() =>
+@@ -54,6 +55,16 @@ const visibleLabels = computed(() =>
    activeLabels.value?.slice(0, maxLabels.value)
  );
  
@@ -34,7 +37,7 @@ index dfd4115..1b77ab4 100644
  const updateVisibleLabels = () => {
    if (!containerRef.value) return;
  
-@@ -79,17 +92,43 @@ const updateVisibleLabels = () => {
+@@ -79,17 +90,43 @@ const updateVisibleLabels = () => {
              : 'flex-shrink',
          ]"
        >
@@ -315,10 +318,17 @@ index bc7aa62..3db1b82 100644
 +}
 +</style>
 diff --git a/app/javascript/dashboard/components/widgets/conversation/conversationCardComponents/CardLabels.vue b/app/javascript/dashboard/components/widgets/conversation/conversationCardComponents/CardLabels.vue
-index c07c730..a3f11b0 100644
+index c07c730..75acf1f 100644
 --- a/app/javascript/dashboard/components/widgets/conversation/conversationCardComponents/CardLabels.vue
 +++ b/app/javascript/dashboard/components/widgets/conversation/conversationCardComponents/CardLabels.vue
-@@ -12,10 +12,21 @@ const props = defineProps({
+@@ -1,5 +1,6 @@
+ <script setup>
+ import { ref, computed, watch, onMounted, nextTick, useSlots } from 'vue';
++import { chaveEtiqueta } from 'dashboard/helper/fpLabels';
+ import { useMapGetter } from 'dashboard/composables/store';
+ 
+ const props = defineProps({
+@@ -12,10 +13,19 @@ const props = defineProps({
  const slots = useSlots();
  const accountLabels = useMapGetter('labels/getLabels');
  
@@ -332,8 +342,6 @@ index c07c730..a3f11b0 100644
 +  return 'rgb(' + mix((n >> 16) & 255) + ',' + mix((n >> 8) & 255) + ',' + mix(n & 255) + ')';
 +};
 +
-+// Compara sem caixa/hifen (ver components-next/CardLabels).
-+const chaveEtiqueta = t => String(t || '').toLowerCase().replace(/[-_]/g, ' ');
  const activeLabels = computed(() => {
 -  return accountLabels.value.filter(({ title }) =>
 -    props.conversationLabels.includes(title)
@@ -343,7 +351,7 @@ index c07c730..a3f11b0 100644
  });
  
  const showAllLabels = ref(false);
-@@ -66,19 +77,19 @@ const onShowLabels = e => {
+@@ -66,19 +76,19 @@ const onShowLabels = e => {
        :class="{ 'h-auto overflow-visible flex-row flex-wrap': showAllLabels }"
      >
        <slot name="before" />
@@ -371,7 +379,7 @@ index c07c730..a3f11b0 100644
        <button
          v-if="showExpandLabelButton"
          :title="
-@@ -97,3 +108,31 @@ const onShowLabels = e => {
+@@ -97,3 +107,31 @@ const onShowLabels = e => {
      </div>
    </div>
  </template>
@@ -403,3 +411,14 @@ index c07c730..a3f11b0 100644
 +  text-overflow: ellipsis;
 +}
 +</style>
+diff --git a/app/javascript/dashboard/helper/fpLabels.js b/app/javascript/dashboard/helper/fpLabels.js
+new file mode 100644
+index 0000000..5e16841
+--- /dev/null
++++ b/app/javascript/dashboard/helper/fpLabels.js
+@@ -0,0 +1,5 @@
++// Compara titulos de etiqueta sem caixa/hifen: a etiqueta definida na conta
++// (ex.: "caixa-postal") e o tag gravado na conversa ("Caixa-postal") podem
++// divergir no case; o card precisa casar mesmo assim.
++export const chaveEtiqueta = t =>
++  String(t || '').toLowerCase().replace(/[-_]/g, ' ');

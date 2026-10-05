@@ -1,5 +1,5 @@
 diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
-index 0239435..6d2e476 100644
+index 0239435..a49a897 100644
 --- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 +++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 @@ -1,10 +1,11 @@
@@ -73,7 +73,39 @@ index 0239435..6d2e476 100644
    sidebarWidth,
    isResizing,
  });
-@@ -360,110 +389,136 @@ const newReportRoutes = () => [
+@@ -231,9 +260,6 @@ const mentionsUnreadCount = useMapGetter(
+ const participatingUnreadCount = useMapGetter(
+   'conversationUnreadCounts/getParticipatingUnreadCount'
+ );
+-const unattendedUnreadCount = useMapGetter(
+-  'conversationUnreadCounts/getUnattendedUnreadCount'
+-);
+ const getFolderUnreadCount = useMapGetter(
+   'conversationUnreadCounts/getFolderUnreadCount'
+ );
+@@ -295,21 +321,6 @@ const buildSortConfig = section => ({
+   onSortChange: sortBy => updateSortPreference(section, sortBy),
+ });
+ 
+-const sortedFolders = computed(() =>
+-  sortSidebarItems(conversationCustomViews.value, {
+-    sortBy: getSortForSection(SIDEBAR_SORT_SECTIONS.FOLDERS),
+-    labelKey: view => view.name,
+-    unreadCountKey: view => getFolderUnreadCount.value(view.id),
+-  })
+-);
+-
+-const sortedTeams = computed(() =>
+-  sortSidebarItems(teams.value, {
+-    sortBy: getSortForSection(SIDEBAR_SORT_SECTIONS.TEAMS),
+-    labelKey: team => team.name,
+-    unreadCountKey: team => getTeamUnreadCount.value(team.id),
+-  })
+-);
+ 
+ const sortedInboxes = computed(() =>
+   sortSidebarItems(inboxes.value, {
+@@ -360,110 +371,136 @@ const newReportRoutes = () => [
  
  const reportRoutes = computed(() => newReportRoutes());
  
@@ -297,7 +329,7 @@ index 0239435..6d2e476 100644
              label: inbox.name,
              badgeCount: getInboxUnreadCount.value(inbox.id),
              icon: h(ChannelIcon, { inbox, class: 'size-[16px]' }),
-@@ -477,477 +532,11 @@ const menuItems = computed(() => {
+@@ -477,477 +514,11 @@ const menuItems = computed(() => {
                }),
            })),
          },
@@ -779,7 +811,7 @@ index 0239435..6d2e476 100644
  });
  </script>
  
-@@ -966,26 +555,35 @@ const menuItems = computed(() => {
+@@ -966,26 +537,35 @@ const menuItems = computed(() => {
      class="bg-n-background flex flex-col text-sm pb-px fixed top-0 ltr:left-0 rtl:right-0 h-full z-40 w-[200px] md:w-auto md:relative md:flex-shrink-0 md:ltr:translate-x-0 md:rtl:translate-x-0 ltr:border-r rtl:border-l border-n-weak"
      :class="[
        {
@@ -820,7 +852,7 @@ index 0239435..6d2e476 100644
            <SidebarAccountSwitcher
              is-collapsed
              @show-create-account-modal="emit('showCreateAccountModal')"
-@@ -1004,11 +602,11 @@ const menuItems = computed(() => {
+@@ -1004,11 +584,11 @@ const menuItems = computed(() => {
        </div>
        <div
          class="flex gap-2"
@@ -835,7 +867,7 @@ index 0239435..6d2e476 100644
            class="flex gap-2 items-center px-2 py-1 w-full h-7 rounded-lg outline outline-1 outline-n-weak bg-n-button-color transition-all duration-100 ease-out"
          >
            <span class="flex-shrink-0 i-lucide-search size-4 text-n-slate-10" />
-@@ -1023,37 +621,30 @@ const menuItems = computed(() => {
+@@ -1023,37 +603,30 @@ const menuItems = computed(() => {
          </RouterLink>
          <RouterLink
            v-else
@@ -885,7 +917,7 @@ index 0239435..6d2e476 100644
        >
          <SidebarGroup
            v-for="item in menuItems"
-@@ -1072,22 +663,22 @@ const menuItems = computed(() => {
+@@ -1072,22 +645,22 @@ const menuItems = computed(() => {
          v-if="
            isOnChatwootCloud &&
            !isACustomBrandedInstance &&
@@ -912,7 +944,7 @@ index 0239435..6d2e476 100644
            @open-key-shortcut-modal="emit('openKeyShortcutModal')"
          />
        </div>
-@@ -1104,5 +695,34 @@ const menuItems = computed(() => {
+@@ -1104,5 +677,34 @@ const menuItems = computed(() => {
          :class="{ 'bg-n-brand': isResizing }"
        />
      </div>
