@@ -1,0 +1,167 @@
+diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+index 799c2c8..188e023 100644
+--- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
++++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+@@ -24,6 +24,7 @@ import EmojiIcon from 'next/emoji-icon-picker/EmojiIcon.vue';
+ import SidebarAccountSwitcher from './SidebarAccountSwitcher.vue';
+ import Logo from 'next/icon/Logo.vue';
+ import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
++import FpNovoAtendimento from 'dashboard/components/widgets/conversation/FpNovoAtendimento.vue';
+ import {
+   SIDEBAR_SORT_SECTIONS,
+   getSidebarSortOptions,
+@@ -154,6 +155,9 @@ const isEffectivelyCollapsed = computed(
+ // lista (margem negativa mantem o espaco de 56px; o box cresce por cima) e
+ // volta ao sair. O estado real de colapso/expansao continua no resize.
+ const hoverTrilho = ref(false);
++
++// painelzinho de novo atendimento (botao da caneta)
++const novoAberto = ref(false);
+ const LARGURA_HOVER = 220;
+ const larguraSidebar = computed(() =>
+   !isMobile.value && hoverTrilho.value && isCollapsed.value
+@@ -695,22 +699,15 @@ const menuItems = computed(() => {
+         >
+           <span class="i-lucide-search size-4 text-n-slate-11" />
+         </RouterLink>
+-        <ComposeConversation align="start">
+-          <template #trigger="{ isOpen }">
+-            <Button
+-              icon="i-lucide-pen-line"
+-              color="slate"
+-              size="sm"
+-              class="dark:hover:!bg-n-slate-9/30"
+-              :class="[
+-                recolhidoParaRender
+-                  ? '!size-8 !outline-n-weak !text-n-slate-11'
+-                  : '!h-7 !outline-n-weak !text-n-slate-11',
+-                { '!bg-n-alpha-2 dark:!bg-n-slate-9/30': isOpen },
+-              ]"
+-            />
+-          </template>
+-        </ComposeConversation>
++        <button
++          type="button"
++          title="Novo atendimento"
++          class="flex items-center justify-center rounded-lg outline outline-1 outline-n-weak bg-n-button-color text-n-slate-11 transition-all duration-100 ease-out hover:bg-n-alpha-2 dark:hover:bg-n-slate-9/30"
++          :class="recolhidoParaRender ? 'size-8' : 'h-7 px-2'"
++          @click="novoAberto = true"
++        >
++          <span class="flex-shrink-0 i-lucide-pen-line size-4" />
++        </button>
+       </div>
+     </section>
+     <nav
+@@ -770,7 +767,8 @@ const menuItems = computed(() => {
+         :class="{ 'bg-n-brand': isResizing }"
+       />
+     </div>
+-  </aside>
++      <FpNovoAtendimento v-if="novoAberto" @close="novoAberto = false" />
++</aside>
+ </template>
+ 
+ <style scoped>
+diff --git a/app/javascript/dashboard/components/widgets/conversation/FpActions.vue b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
+index d018454..db50144 100644
+--- a/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
++++ b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
+@@ -69,8 +69,8 @@ const acoes = computed(() => [
+     run: () => enviarAcao('tabular'),
+   },
+   {
+-    rot: 'Ficha do cliente',
+-    curto: 'Ficha',
++    rot: 'Dados do cliente',
++    curto: 'Dados',
+     ic: 'i-lucide-file-text',
+     run: () => abrirPainel(),
+   },
+@@ -90,8 +90,8 @@ const acoes = computed(() => [
+     run: () => enviarAcao('template'),
+   },
+   {
+-    rot: 'Abrir na base',
+-    curto: 'Base',
++    rot: 'Ficha completa na base',
++    curto: 'Ficha Completa',
+     ic: 'i-lucide-folder-open',
+     run: () =>
+       abrirExterno(
+diff --git a/app/javascript/dashboard/components/widgets/conversation/FpNovoAtendimento.vue b/app/javascript/dashboard/components/widgets/conversation/FpNovoAtendimento.vue
+new file mode 100644
+index 0000000..416c8ee
+--- /dev/null
++++ b/app/javascript/dashboard/components/widgets/conversation/FpNovoAtendimento.vue
+@@ -0,0 +1,71 @@
++<script>
++// Painelzinho de "novo atendimento": abre a NOSSA telinha num iframe por cima
++// do Chatwoot. Ela fala com o painel e devolve o evento 'fp:novo-atendimento'
++// com a URL da conversa criada - ai a gente navega para ela.
++const MENSAGEM_FECHAR = 'fp:fechar-novo-atendimento';
++const MENSAGEM_CRIADO = 'fp:novo-atendimento';
++
++export default {
++  name: 'FpNovoAtendimento',
++  emits: ['close'],
++  computed: {
++    tema() {
++      return document.body.classList.contains('dark') ? 'dark' : 'light';
++    },
++    iframeUrl() {
++      return '/clientes/embed/novo-atendimento?tema=' + this.tema;
++    },
++  },
++  mounted() {
++    window.addEventListener('message', this.onMessage);
++    window.addEventListener('keydown', this.onKey);
++  },
++  unmounted() {
++    window.removeEventListener('message', this.onMessage);
++    window.removeEventListener('keydown', this.onKey);
++  },
++  methods: {
++    onKey(e) {
++      if (e.key === 'Escape') this.$emit('close');
++    },
++    onMessage(event) {
++      const frame = this.$refs.frame;
++      if (!frame || frame.contentWindow !== event.source) return;
++      let dados = event.data;
++      if (typeof dados === 'string') {
++        try { dados = JSON.parse(dados); } catch (e) { return; }
++      }
++      if (!dados || !dados.event) return;
++      if (dados.event === MENSAGEM_FECHAR) {
++        this.$emit('close');
++        return;
++      }
++      if (dados.event === MENSAGEM_CRIADO) {
++        this.$emit('close');
++        const url = dados.data && dados.data.url;
++        if (url) window.location.href = url;
++      }
++    },
++  },
++};
++</script>
++
++<template>
++  <div class="fp-novo-fundo" @click.self="$emit('close')">
++    <div class="fp-novo-caixa">
++      <button class="fp-novo-x" @click="$emit('close')" aria-label="Fechar">x</button>
++      <iframe ref="frame" :src="iframeUrl" class="fp-novo-frame" />
++    </div>
++  </div>
++</template>
++
++<style scoped>
++.fp-novo-fundo{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10000;
++  display:flex;align-items:flex-start;justify-content:center;padding:48px 16px}
++.fp-novo-caixa{position:relative;background:#fff;border-radius:16px;overflow:hidden;
++  width:560px;max-width:100%;max-height:calc(100vh - 96px);display:flex;
++  box-shadow:0 24px 60px rgba(0,0,0,.35)}
++.fp-novo-x{position:absolute;top:10px;right:12px;z-index:2;border:0;background:transparent;
++  font-size:22px;line-height:1;cursor:pointer;color:#64748b}
++.fp-novo-frame{width:560px;height:620px;max-width:100%;border:0;display:block}
++</style>
