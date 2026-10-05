@@ -117,7 +117,7 @@ index 1d76ae2..1e7877a 100644
 +}
 +</style>
 diff --git a/app/javascript/dashboard/components-next/Conversation/ConversationCard/ConversationCardExpanded.vue b/app/javascript/dashboard/components-next/Conversation/ConversationCard/ConversationCardExpanded.vue
-index 0119b71..f4c7fb8 100644
+index 0119b71..5393eb8 100644
 --- a/app/javascript/dashboard/components-next/Conversation/ConversationCard/ConversationCardExpanded.vue
 +++ b/app/javascript/dashboard/components-next/Conversation/ConversationCard/ConversationCardExpanded.vue
 @@ -70,7 +70,7 @@ const selectedModel = computed({
@@ -129,6 +129,15 @@ index 0119b71..f4c7fb8 100644
      :class="{
        'active animate-card-select bg-n-alpha-1 dark:bg-n-alpha-3 !border-n-surface-1':
          isActiveChat,
+@@ -149,7 +149,7 @@ const selectedModel = computed({
+         :contact="currentContact"
+         :selected="false"
+         :enable-selection="false"
+-        :hide-thumbnail="false"
++        :hide-thumbnail="true"
+       />
+ 
+       <h4
 @@ -192,3 +192,19 @@ const selectedModel = computed({
      </div>
    </div>
@@ -150,10 +159,19 @@ index 0119b71..f4c7fb8 100644
 +}
 +</style>
 diff --git a/app/javascript/dashboard/components/ChatList.vue b/app/javascript/dashboard/components/ChatList.vue
-index 4819a39..d7ee8ab 100644
+index 4819a39..8365109 100644
 --- a/app/javascript/dashboard/components/ChatList.vue
 +++ b/app/javascript/dashboard/components/ChatList.vue
-@@ -185,10 +185,10 @@ const assigneeTabItems = computed(() => {
+@@ -177,18 +177,17 @@ const assigneeTabItems = computed(() => {
+     ASSIGNEE_TYPE_TAB_PERMISSIONS,
+     userPermissions.value,
+     item => item.permissions
+-  ).map(({ key, count: countKey }) => ({
++  ).map(({ key }) => ({
+     key,
+     name: t(`CHAT_LIST.ASSIGNEE_TYPE_TABS.${key}`),
+-    count: conversationStats.value[countKey] || 0,
+   }));
  });
  
  const showAssigneeInConversationCard = computed(() => {
@@ -169,7 +187,7 @@ index 4819a39..d7ee8ab 100644
  
  const currentPageFilterKey = computed(() => {
 diff --git a/app/javascript/dashboard/components/ConversationItem.vue b/app/javascript/dashboard/components/ConversationItem.vue
-index 866c8bc..7f52c0f 100644
+index 866c8bc..a3e6144 100644
 --- a/app/javascript/dashboard/components/ConversationItem.vue
 +++ b/app/javascript/dashboard/components/ConversationItem.vue
 @@ -71,9 +71,9 @@ const inbox = computed(() => {
@@ -185,6 +203,14 @@ index 866c8bc..7f52c0f 100644
  const isInboxView = computed(() => !!activeInbox.value);
  const showAssigneeForExpandedCard = computed(
    () => props.showExpanded || props.showAssignee
+@@ -200,6 +200,7 @@ const onDeleteConversation = () => {
+   <!-- Default (condensed) layout -->
+   <ConversationCard
+     v-else
++    :hide-thumbnail="true"
+     :chat="source"
+     :current-contact="currentContact"
+     :assignee="assignee"
 diff --git a/app/javascript/dashboard/components/widgets/conversation/ConversationCard.vue b/app/javascript/dashboard/components/widgets/conversation/ConversationCard.vue
 index bc7aa62..3db1b82 100644
 --- a/app/javascript/dashboard/components/widgets/conversation/ConversationCard.vue

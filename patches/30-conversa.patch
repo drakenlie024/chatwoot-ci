@@ -33,18 +33,19 @@ index bf45cdc..f799d7a 100644
        <div v-if="isMessageLengthReachingThreshold" class="text-xs">
          <span :class="charLengthClass">
 diff --git a/app/javascript/dashboard/components/widgets/conversation/ConversationHeader.vue b/app/javascript/dashboard/components/widgets/conversation/ConversationHeader.vue
-index 2773800..414d62e 100644
+index 2773800..f6a7db3 100644
 --- a/app/javascript/dashboard/components/widgets/conversation/ConversationHeader.vue
 +++ b/app/javascript/dashboard/components/widgets/conversation/ConversationHeader.vue
-@@ -6,6 +6,7 @@ import { useElementSize } from '@vueuse/core';
+@@ -5,7 +5,7 @@ import { useStore } from 'vuex';
+ import { useElementSize } from '@vueuse/core';
  import BackButton from '../BackButton.vue';
  import InboxName from '../InboxName.vue';
- import MoreActions from './MoreActions.vue';
+-import MoreActions from './MoreActions.vue';
 +import FpActions from './FpActions.vue';
  import Avatar from 'next/avatar/Avatar.vue';
  import SLACardLabel from './components/SLACardLabel.vue';
  import ConversationCallButton from './ConversationCallButton.vue';
-@@ -110,7 +111,7 @@ const copyConversationId = async () => {
+@@ -110,7 +110,7 @@ const copyConversationId = async () => {
  <template>
    <div
      ref="conversationHeader"
@@ -53,12 +54,12 @@ index 2773800..414d62e 100644
    >
      <div
        class="flex items-center justify-start w-full xl:w-auto max-w-full min-w-0 xl:flex-1"
-@@ -173,7 +174,16 @@ const copyConversationId = async () => {
+@@ -173,7 +173,15 @@ const copyConversationId = async () => {
          class="hidden md:flex"
        />
        <ConversationCallButton :inbox="inbox" :chat="currentChat" />
+-      <MoreActions :conversation-id="currentChat.id" />
 +      <FpActions :chat="currentChat" />
-       <MoreActions :conversation-id="currentChat.id" />
      </div>
    </div>
  </template>
@@ -150,10 +151,10 @@ index 89b01cb..59f6e33 100644
  </template>
 diff --git a/app/javascript/dashboard/components/widgets/conversation/FpActions.vue b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
 new file mode 100644
-index 0000000..1eb2ebc
+index 0000000..e3cf033
 --- /dev/null
 +++ b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
-@@ -0,0 +1,194 @@
+@@ -0,0 +1,169 @@
 +<script setup>
 +import { computed } from 'vue';
 +import { useStore } from 'vuex';
@@ -198,16 +199,6 @@ index 0000000..1eb2ebc
 +  });
 +};
 +
-+// Finalizar o atendimento - e o nosso botao no lugar do "Resolver" do Chatwoot.
-+const finalizar = () => {
-+  const id = props.chat && props.chat.id;
-+  if (!id) return;
-+  store.dispatch('conversations/toggleStatus', {
-+    conversationId: id,
-+    status: 'resolved',
-+  });
-+};
-+
 +// A acao vai para o painel FP (ConversationSidebar -> FpFrame -> iframe). Como o
 +// iframe pode estar montando ainda, repetimos por alguns segundos ate chegar.
 +const enviarAcao = acao => {
@@ -235,8 +226,8 @@ index 0000000..1eb2ebc
 +    run: () => enviarAcao('tabular'),
 +  },
 +  {
-+    rot: 'Dados do cliente',
-+    curto: 'Dados',
++    rot: 'Ficha do cliente',
++    curto: 'Ficha',
 +    ic: 'i-lucide-file-text',
 +    run: () => abrirPainel(),
 +  },
@@ -254,21 +245,6 @@ index 0000000..1eb2ebc
 +    curto: 'Template',
 +    ic: 'i-lucide-send',
 +    run: () => enviarAcao('template'),
-+  },
-+  {
-+    rot: 'Ficha completa na base',
-+    curto: 'Ficha Completa',
-+    ic: 'i-lucide-folder-open',
-+    run: () =>
-+      abrirExterno(
-+        `/clientes/?aba=busca&tipo=${buscaTipo.value}&q=${encodeURIComponent(buscaQ.value)}`
-+      ),
-+  },
-+  {
-+    rot: 'Finalizar atendimento',
-+    curto: 'Finalizar',
-+    ic: 'i-lucide-check-check',
-+    run: () => finalizar(),
 +  },
 +]);
 +</script>
