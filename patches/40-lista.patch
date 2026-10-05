@@ -168,6 +168,23 @@ index 4819a39..d7ee8ab 100644
  });
  
  const currentPageFilterKey = computed(() => {
+diff --git a/app/javascript/dashboard/components/ConversationItem.vue b/app/javascript/dashboard/components/ConversationItem.vue
+index 866c8bc..7f52c0f 100644
+--- a/app/javascript/dashboard/components/ConversationItem.vue
++++ b/app/javascript/dashboard/components/ConversationItem.vue
+@@ -71,9 +71,9 @@ const inbox = computed(() => {
+   return inboxId ? store.getters['inboxes/getInbox'](inboxId) : {};
+ });
+ 
+-const showInboxName = computed(
+-  () => !activeInbox.value && inboxesList.value.length > 1
+-);
++// A lista mostra so contato + previa + hora (desenho aprovado). Sem a linha
++// da caixa no topo do card.
++const showInboxName = computed(() => false);
+ const isInboxView = computed(() => !!activeInbox.value);
+ const showAssigneeForExpandedCard = computed(
+   () => props.showExpanded || props.showAssignee
 diff --git a/app/javascript/dashboard/components/widgets/conversation/ConversationCard.vue b/app/javascript/dashboard/components/widgets/conversation/ConversationCard.vue
 index bc7aa62..3db1b82 100644
 --- a/app/javascript/dashboard/components/widgets/conversation/ConversationCard.vue

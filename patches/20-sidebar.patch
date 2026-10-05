@@ -1,5 +1,5 @@
 diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
-index 0239435..5cd457d 100644
+index 0239435..6d2e476 100644
 --- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 +++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
 @@ -1,10 +1,11 @@
@@ -166,7 +166,7 @@ index 0239435..5cd457d 100644
 -      icon: 'i-lucide-message-circle',
 +      name: 'MeuDia',
 +      label: 'Meu dia',
-+      icon: 'i-lucide-calendar-day',
++      icon: 'i-lucide-calendar',
 +      to: accountScopedRoute('clientes_fila'),
 +      activeOn: ['clientes_fila', 'clientes_busca', 'clientes_index'],
 +      badgeCount: meuDiaCount.value,
