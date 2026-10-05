@@ -1,0 +1,157 @@
+diff --git a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+index 3f870cb..f1ddc2e 100644
+--- a/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
++++ b/app/javascript/dashboard/components-next/sidebar/Sidebar.vue
+@@ -150,6 +150,28 @@ const isEffectivelyCollapsed = computed(
+   () => !isMobile.value && isCollapsed.value
+ );
+ 
++// --- Trilho (mockup 12): recolhida, passar o mouse a expande POR CIMA da
++// lista (margem negativa mantem o espaco de 56px; o box cresce por cima) e
++// volta ao sair. O estado real de colapso/expansao continua no resize.
++const hoverTrilho = ref(false);
++const LARGURA_HOVER = 220;
++const larguraSidebar = computed(() =>
++  !isMobile.value && hoverTrilho.value ? LARGURA_HOVER : sidebarWidth.value
++);
++const aoEntrarTrilho = () => {
++  if (!isMobile.value && isCollapsed.value) hoverTrilho.value = true;
++};
++const aoSairTrilho = () => {
++  hoverTrilho.value = false;
++};
++
++// Enquanto o trilho esta aberto no hover, o conteudo interno (rotulos, nome
++// do grupo) e' renderizado como EXPANDIDO - por isso o computed abaixo vira
++// falso (ou seja: nao-recolhido) durante o hover.
++const recolhidoParaRender = computed(
++  () => isEffectivelyCollapsed.value && !hoverTrilho.value
++);
++
+ // Resize handle logic
+ const isResizing = ref(false);
+ const startX = ref(0);
+@@ -158,7 +180,7 @@ const startWidth = ref(0);
+ provideSidebarContext({
+   expandedItem,
+   setExpandedItem,
+-  isCollapsed: isEffectivelyCollapsed,
++  isCollapsed: recolhidoParaRender,
+   sidebarWidth,
+   isResizing,
+ });
+@@ -598,28 +620,31 @@ const menuItems = computed(() => {
+       },
+     ]"
+     class="bg-n-background flex flex-col text-sm pb-px fixed top-0 ltr:left-0 rtl:right-0 h-full z-40 w-[200px] md:w-auto md:relative md:flex-shrink-0 md:ltr:translate-x-0 md:rtl:translate-x-0 ltr:border-r rtl:border-l border-n-weak"
++    @mouseenter="aoEntrarTrilho"
++    @mouseleave="aoSairTrilho"
+     :class="[
+       {
++        'fp-trilho-hover': hoverTrilho && !isMobile,
+         'shadow-lg md:shadow-none': isMobileSidebarOpen,
+         'ltr:-translate-x-full rtl:translate-x-full': !isMobileSidebarOpen,
+         'transition-transform duration-200 ease-out md:transition-[width]':
+           !isResizing,
+       },
+     ]"
+-    :style="isMobile ? undefined : { width: `${sidebarWidth}px` }"
++    :style="isMobile ? undefined : { width: `${larguraSidebar}px` }"
+   >
+     <section
+       class="grid"
+-      :class="isEffectivelyCollapsed ? 'mt-3 mb-6 gap-4' : 'mt-1 mb-4 gap-2'"
++      :class="recolhidoParaRender ? 'mt-3 mb-6 gap-4' : 'mt-1 mb-4 gap-2'"
+     >
+       <div
+         class="flex gap-2 items-center min-w-0"
+         :class="{
+-          'justify-center px-1': isEffectivelyCollapsed,
+-          'px-2': !isEffectivelyCollapsed,
++          'justify-center px-1': recolhidoParaRender,
++          'px-2': !recolhidoParaRender,
+         }"
+       >
+-        <template v-if="isEffectivelyCollapsed">
++        <template v-if="recolhidoParaRender">
+           <SidebarAccountSwitcher
+             is-collapsed
+             @show-create-account-modal="emit('showCreateAccountModal')"
+@@ -638,10 +663,10 @@ const menuItems = computed(() => {
+       </div>
+       <div
+         class="flex gap-2"
+-        :class="isEffectivelyCollapsed ? 'flex-col items-center' : 'px-2'"
++        :class="recolhidoParaRender ? 'flex-col items-center' : 'px-2'"
+       >
+         <RouterLink
+-          v-if="!isEffectivelyCollapsed"
++          v-if="!recolhidoParaRender"
+           :to="{ name: 'search' }"
+           class="flex gap-2 items-center px-2 py-1 w-full h-7 rounded-lg outline outline-1 outline-n-weak bg-n-button-color transition-all duration-100 ease-out"
+         >
+@@ -671,7 +696,7 @@ const menuItems = computed(() => {
+               size="sm"
+               class="dark:hover:!bg-n-slate-9/30"
+               :class="[
+-                isEffectivelyCollapsed
++                recolhidoParaRender
+                   ? '!size-8 !outline-n-weak !text-n-slate-11'
+                   : '!h-7 !outline-n-weak !text-n-slate-11',
+                 { '!bg-n-alpha-2 dark:!bg-n-slate-9/30': isOpen },
+@@ -683,11 +708,11 @@ const menuItems = computed(() => {
+     </section>
+     <nav
+       class="grid overflow-y-scroll flex-grow gap-2 pb-5 no-scrollbar min-w-0"
+-      :class="isEffectivelyCollapsed ? 'px-1' : 'px-2'"
++      :class="recolhidoParaRender ? 'px-1' : 'px-2'"
+     >
+       <ul
+         class="flex flex-col gap-1 m-0 list-none min-w-0"
+-        :class="{ 'items-center': isEffectivelyCollapsed }"
++        :class="{ 'items-center': recolhidoParaRender }"
+       >
+         <SidebarGroup
+           v-for="item in menuItems"
+@@ -706,22 +731,22 @@ const menuItems = computed(() => {
+         v-if="
+           isOnChatwootCloud &&
+           !isACustomBrandedInstance &&
+-          !isEffectivelyCollapsed
++          !recolhidoParaRender
+         "
+       />
+       <SidebarChangelogButton
+         v-if="
+           isOnChatwootCloud &&
+           !isACustomBrandedInstance &&
+-          isEffectivelyCollapsed
++          recolhidoParaRender
+         "
+       />
+       <div
+         class="px-1 py-1.5 flex-shrink-0 flex w-full z-50 gap-2 items-center border-t border-n-weak shadow-[0px_-2px_4px_0px_rgba(27,28,29,0.02)]"
+-        :class="isEffectivelyCollapsed ? 'justify-center' : 'justify-between'"
++        :class="recolhidoParaRender ? 'justify-center' : 'justify-between'"
+       >
+         <SidebarProfileMenu
+-          :is-collapsed="isEffectivelyCollapsed"
++          :is-collapsed="recolhidoParaRender"
+           @open-key-shortcut-modal="emit('openKeyShortcutModal')"
+         />
+       </div>
+@@ -740,3 +765,14 @@ const menuItems = computed(() => {
+     </div>
+   </aside>
+ </template>
++
++<style scoped>
++/* Trilho: recolhida, ao passar o mouse o box cresce e a margem negativa
++   mantEM o espaco de 56px no layout - ou seja, expande POR CIMA, sem
++   empurrar a lista de conversas (mockup 12). */
++.fp-trilho-hover {
++  margin-inline-end: -164px;
++  z-index: 60;
++  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.18);
++}
++</style>
