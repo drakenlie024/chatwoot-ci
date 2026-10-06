@@ -1,3 +1,39 @@
+diff --git a/app/javascript/dashboard/api/inbox/message.js b/app/javascript/dashboard/api/inbox/message.js
+index 06b8507..84a0b61 100644
+--- a/app/javascript/dashboard/api/inbox/message.js
++++ b/app/javascript/dashboard/api/inbox/message.js
+@@ -12,6 +12,7 @@ export const buildCreatePayload = ({
+   bccEmails = '',
+   toEmails = '',
+   templateParams,
++  contentType,
+   isVoiceMessage = false,
+ }) => {
+   let payload;
+@@ -43,6 +44,7 @@ export const buildCreatePayload = ({
+       private: isPrivate,
+       echo_id: echoId,
+       content_attributes: contentAttributes,
++      content_type: contentType,
+       cc_emails: ccEmails,
+       bcc_emails: bccEmails,
+       to_emails: toEmails,
+@@ -68,6 +70,7 @@ class MessageApi extends ApiClient {
+     bccEmails = '',
+     toEmails = '',
+     templateParams,
++    contentType,
+     isVoiceMessage = false,
+   }) {
+     return axios({
+@@ -77,6 +80,7 @@ class MessageApi extends ApiClient {
+         message,
+         isPrivate,
+         contentAttributes,
++        contentType,
+         echoId,
+         files,
+         ccEmails,
 diff --git a/app/javascript/dashboard/components/widgets/WootWriter/ReplyBottomPanel.vue b/app/javascript/dashboard/components/widgets/WootWriter/ReplyBottomPanel.vue
 index cbb0804..dee66b3 100644
 --- a/app/javascript/dashboard/components/widgets/WootWriter/ReplyBottomPanel.vue
@@ -151,14 +187,15 @@ index 89b01cb..59f6e33 100644
  </template>
 diff --git a/app/javascript/dashboard/components/widgets/conversation/FpActions.vue b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
 new file mode 100644
-index 0000000..0e290ca
+index 0000000..df9bfe1
 --- /dev/null
 +++ b/app/javascript/dashboard/components/widgets/conversation/FpActions.vue
-@@ -0,0 +1,169 @@
+@@ -0,0 +1,182 @@
 +<script setup>
 +import { computed, ref } from 'vue';
 +import FpTabular from './FpTabular.vue';
 +import FpTemplate from './FpTemplate.vue';
++import FpInterativo from './FpInterativo.vue';
 +import { useStore } from 'vuex';
 +import { useUISettings } from 'dashboard/composables/useUISettings';
 +
@@ -172,6 +209,7 @@ index 0000000..0e290ca
 +const store = useStore();
 +const tabularAberto = ref(false);
 +const templateAberto = ref(false);
++const interativoAberto = ref(false);
 +const { updateUISettings } = useUISettings();
 +
 +const contact = computed(
@@ -236,6 +274,12 @@ index 0000000..0e290ca
 +    ic: 'i-lucide-send',
 +    run: () => (templateAberto.value = true),
 +  },
++  {
++    rot: 'Resposta rápida (com botões)',
++    curto: 'Respostas',
++    ic: 'i-lucide-message-circle',
++    run: () => (interativoAberto.value = true),
++  },
 +]);
 +</script>
 +
@@ -262,6 +306,11 @@ index 0000000..0e290ca
 +    v-if="templateAberto"
 +    :chat="props.chat"
 +    @close="templateAberto = false"
++  />
++  <FpInterativo
++    v-if="interativoAberto"
++    :chat="props.chat"
++    @close="interativoAberto = false"
 +  />
 +</template>
 +
@@ -922,6 +971,138 @@ index 0000000..8cdf692
 +  border: 0;
 +  display: block;
 +}
++</style>
+diff --git a/app/javascript/dashboard/components/widgets/conversation/FpInterativo.vue b/app/javascript/dashboard/components/widgets/conversation/FpInterativo.vue
+new file mode 100644
+index 0000000..c9b38b2
+--- /dev/null
++++ b/app/javascript/dashboard/components/widgets/conversation/FpInterativo.vue
+@@ -0,0 +1,126 @@
++<script>
++// Modal de resposta rápida INTERATIVA (WhatsApp Cloud API): manda uma mensagem
++// com botões de resposta rápida dentro da janela de 24h. Envia pelo próprio
++// store do Chatwoot com content_type "input_select" (o provider traduz para
++// 'interactive'). Fora da janela de 24h, use o Template.
++export default {
++  name: 'FpInterativo',
++  props: {
++    chat: { type: Object, default: () => ({}) },
++  },
++  emits: ['close'],
++  data() {
++    return {
++      texto: '',
++      opcoes: ['', '', ''],
++      presets: [
++        { rot: 'Consultar valores', op: ['Consultar valores', 'Não tenho interesse'] },
++        { rot: 'Confirmar', op: ['Sim, quero', 'Agora não', 'Falar com humano'] },
++        { rot: 'Retorno', op: ['Pode falar agora', 'Me chame depois'] },
++      ],
++      erro: '',
++      enviando: false,
++    };
++  },
++  computed: {
++    conversationId() {
++      return this.chat && this.chat.id;
++    },
++    podeEnviar() {
++      return this.texto.trim() !== '' && this.opcoes.some(o => o.trim() !== '');
++    },
++  },
++  mounted() {
++    window.addEventListener('keydown', this.onKey);
++  },
++  unmounted() {
++    window.removeEventListener('keydown', this.onKey);
++  },
++  methods: {
++    onKey(e) {
++      if (e.key === 'Escape') this.$emit('close');
++    },
++    usarPreset(p) {
++      this.opcoes = [p.op[0] || '', p.op[1] || '', p.op[2] || ''];
++      if (!this.texto.trim()) this.texto = 'Olá, tudo bem?';
++    },
++    async enviar() {
++      this.erro = '';
++      const texto = this.texto.trim();
++      const opcoes = this.opcoes.map(o => o.trim()).filter(Boolean).slice(0, 3);
++      if (!texto || !opcoes.length) {
++        this.erro = 'Escreva a mensagem e ao menos um botão.';
++        return;
++      }
++      this.enviando = true;
++      try {
++        await this.$store.dispatch('createPendingMessageAndSend', {
++          conversationId: this.conversationId,
++          message: texto,
++          private: false,
++          contentType: 'input_select',
++          contentAttributes: {
++            items: opcoes.map((t, i) => ({ title: t.slice(0, 24), value: String(i + 1) })),
++          },
++        });
++        this.$emit('close');
++      } catch (e) {
++        this.erro =
++          (e && e.response && e.response.data && e.response.data.error) ||
++          'Falha ao enviar. Confira se a janela de 24h está aberta.';
++      }
++      this.enviando = false;
++    },
++  },
++};
++</script>
++
++<template>
++  <Teleport to="body">
++    <div class="fp-int-fundo" @click.self="$emit('close')">
++      <div class="fp-int-caixa">
++        <button class="fp-int-x" @click="$emit('close')" aria-label="Fechar">x</button>
++        <h3>Resposta rápida (com botões)</h3>
++        <p class="fp-int-sub">Só funciona dentro da janela de 24h. Fora dela, use o Template.</p>
++        <label class="fp-int-lb">Mensagem</label>
++        <textarea v-model="texto" rows="2" class="fp-int-in" placeholder="Olá, tudo bem?"></textarea>
++        <label class="fp-int-lb">Botões (até 3)</label>
++        <input v-for="(o, i) in opcoes" :key="i" v-model="opcoes[i]" class="fp-int-in"
++          :placeholder="'Botão ' + (i + 1)" maxlength="24" />
++        <div class="fp-int-presets">
++          <button v-for="p in presets" :key="p.rot" class="fp-int-chip" @click="usarPreset(p)">{{ p.rot }}</button>
++        </div>
++        <p v-if="erro" class="fp-int-erro">{{ erro }}</p>
++        <div class="fp-int-rodape">
++          <button class="fp-int-btn" @click="$emit('close')">Cancelar</button>
++          <button class="fp-int-btn primario" :disabled="!podeEnviar || enviando" @click="enviar">
++            {{ enviando ? 'Enviando...' : 'Enviar' }}
++          </button>
++        </div>
++      </div>
++    </div>
++  </Teleport>
++</template>
++
++<style scoped>
++.fp-int-fundo{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10000;
++  display:flex;align-items:flex-start;justify-content:center;padding:60px 16px}
++.fp-int-caixa{position:relative;background:#fff;color:#132036;border-radius:16px;
++  width:420px;max-width:100%;padding:18px 18px 14px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
++.fp-int-x{position:absolute;top:8px;right:12px;border:0;background:transparent;
++  font-size:20px;line-height:1;cursor:pointer;color:#64748b}
++.fp-int-caixa h3{margin:0 0 4px;font-size:15px;font-weight:800}
++.fp-int-sub{margin:0 0 12px;font-size:12px;color:#6b7a90}
++.fp-int-lb{display:block;font-size:11px;font-weight:700;color:#6b7a90;margin:8px 0 4px}
++.fp-int-in{width:100%;box-sizing:border-box;border:1px solid #e2e9f5;border-radius:9px;
++  padding:8px 10px;font:inherit;font-size:13px;margin-bottom:6px;color:#132036;background:#fff}
++.fp-int-presets{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
++.fp-int-chip{border:1px solid #e2e9f5;background:#f4f7fc;border-radius:999px;padding:4px 10px;
++  font-size:12px;font-weight:700;color:#334155;cursor:pointer}
++.fp-int-erro{color:#991b1b;background:#fee2e2;border-radius:8px;padding:7px 9px;font-size:12px}
++.fp-int-rodape{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
++.fp-int-btn{border:1px solid #e2e9f5;background:#fff;border-radius:10px;padding:8px 16px;
++  font-size:13px;font-weight:800;color:#334155;cursor:pointer}
++.fp-int-btn.primario{background:linear-gradient(135deg,#2b7fe0,#7c3aed);color:#fff;border-color:transparent}
++.fp-int-btn[disabled]{opacity:.55;cursor:not-allowed}
 +</style>
 diff --git a/app/javascript/dashboard/components/widgets/conversation/FpTabular.vue b/app/javascript/dashboard/components/widgets/conversation/FpTabular.vue
 new file mode 100644
