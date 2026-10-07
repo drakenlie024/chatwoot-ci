@@ -1,0 +1,27 @@
+diff --git a/app/models/message.rb b/app/models/message.rb
+index 913fb5a..554e42e 100644
+--- a/app/models/message.rb
++++ b/app/models/message.rb
+@@ -65,6 +65,7 @@ class Message < ApplicationRecord
+ 
+   before_validation :ensure_content_type
+   before_validation :prevent_message_flooding
++  before_validation :fp_limpa_barras_de_quebra
+   before_save :ensure_processed_message_content
+   before_save :ensure_in_reply_to
+ 
+@@ -222,6 +223,14 @@ class Message < ApplicationRecord
+     content_attributes.dig(:email, :auto_reply) == true
+   end
+ 
++  # FP: tira a barra invertida que aparece ANTES de uma quebra de linha
++  # ("\" + enter). Vem de texto colado de ferramentas externas que escapam
++  # o \n. Ai a quebra chega limpa pro cliente e o historico nao guarda o lixo.
++  def fp_limpa_barras_de_quebra
++    return unless content.is_a?(String) && content.include?("\\\n")
++    self.content = content.gsub("\\\n", "\n")
++  end
++
+   def valid_first_reply?
+     return false unless human_response? && !private?
+     return false if conversation.first_reply_created_at.present?
